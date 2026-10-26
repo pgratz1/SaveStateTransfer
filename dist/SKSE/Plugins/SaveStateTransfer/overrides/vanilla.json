@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "description": "Quest replay overrides for vanilla Skyrim. Matched by editor ID glob. Modes: skip | finalOnly | onlyStages.",
+  "rules": [
+    { "match": "MQ101", "mode": "finalOnly", "reason": "Unbound: intro sequence must never be replayed" },
+    { "match": "MQ102", "mode": "skip",      "reason": "Before the Storm: start-game-enabled, driven by MQ101 completion" },
+    { "match": "DialogueFavorGeneric", "mode": "skip", "reason": "generic favor framework quest" },
+    { "match": "WI*",   "mode": "skip", "reason": "world interaction radiant quests" },
+    { "match": "DGIntimidate*", "mode": "skip", "reason": "radiant intimidation" },
+    { "match": "BQ*",   "mode": "skip", "reason": "bounty radiant quests" },
+    { "match": "CR*",   "mode": "skip", "reason": "Companions radiant quests" }
+  ]
+}

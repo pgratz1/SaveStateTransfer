@@ -1,0 +1,34 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "linux-xwin-release",
+      "displayName": "Linux cross-compile (clang-cl + xwin), Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-xwin-release",
+      "toolchainFile": "${sourceDir}/cmake/toolchain-clang-cl-xwin.cmake",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "linux-xwin-debug",
+      "inherits": "linux-xwin-release",
+      "displayName": "Linux cross-compile (clang-cl + xwin), RelWithDebInfo",
+      "binaryDir": "${sourceDir}/build/linux-xwin-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC, Release (CI)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-msvc-release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux-xwin-release", "configurePreset": "linux-xwin-release" },
+    { "name": "linux-xwin-debug", "configurePreset": "linux-xwin-debug" },
+    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release" }
+  ]
+}

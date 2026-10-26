@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "description": "Quest replay overrides for Dawnguard, Hearthfire and Dragonborn.",
+  "rules": [
+    { "match": "DLC1Init*",      "mode": "skip", "reason": "Dawnguard initialisation" },
+    { "match": "DLC1VQ01",       "mode": "skip", "reason": "Dawnguard trigger quest, start-game-enabled" },
+    { "match": "DLC2Init*",      "mode": "skip", "reason": "Dragonborn initialisation" },
+    { "match": "DLC2MQ01",       "mode": "skip", "reason": "Dragonborn trigger quest, start-game-enabled" },
+    { "match": "BYOHHouse*Init*","mode": "skip", "reason": "Hearthfire house initialisation" }
+  ]
+}
