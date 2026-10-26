@@ -11,6 +11,9 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
+# We never install; this also disables CommonLibSSE-NG's install(EXPORT) rules, which cannot
+# export source-fetched fmt/spdlog targets.
+set(CMAKE_SKIP_INSTALL_RULES ON)
 
 # --- dependencies (all source-fetched; no vcpkg) --------------------------------------------
 set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
@@ -63,7 +66,7 @@ FetchContent_MakeAvailable(fmt spdlog rapidcsv nlohmann_json simpleini)
 # CommonLibSSE-NG does find_path(RAPIDCSV_INCLUDE_DIRS "rapidcsv.h"); point it at the fetched header.
 set(RAPIDCSV_INCLUDE_DIRS "${rapidcsv_SOURCE_DIR}/src" CACHE PATH "" FORCE)
 FetchContent_MakeAvailable(CommonLibSSE)
-target_include_directories(CommonLibSSE SYSTEM PUBLIC "${rapidcsv_SOURCE_DIR}/src")
+target_include_directories(CommonLibSSE SYSTEM PUBLIC "$<BUILD_INTERFACE:${rapidcsv_SOURCE_DIR}/src>")
 
 # --- plugin ----------------------------------------------------------------------------------
 configure_file(src/Version.h.in "${CMAKE_CURRENT_BINARY_DIR}/include/Version.h" @ONLY)

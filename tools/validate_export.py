@@ -29,8 +29,12 @@ def iter_form_keys(node, path="$"):
             yield from iter_form_keys(v, f"{path}[{i}]")
 
 
+# Vanilla masters are force-loaded and never listed in MO2's plugins.txt.
+IMPLICIT_MASTERS = {"skyrim.esm", "update.esm", "dawnguard.esm", "hearthfires.esm", "dragonborn.esm"}
+
+
 def load_plugins_txt(path: Path):
-    enabled = []
+    enabled = list(IMPLICIT_MASTERS)
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         line = line.strip()
         if line.startswith("*"):
