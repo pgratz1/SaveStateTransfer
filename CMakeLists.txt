@@ -13,9 +13,18 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
 # --- dependencies (all source-fetched; no vcpkg) --------------------------------------------
+set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
+set(FMT_DOC OFF CACHE BOOL "" FORCE)
+set(FMT_TEST OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG        11.1.4
+    GIT_SHALLOW    TRUE
+    OVERRIDE_FIND_PACKAGE)
+
 set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
-set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
+set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL "" FORCE)
 set(SPDLOG_USE_STD_FORMAT OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -50,7 +59,7 @@ FetchContent_Declare(CommonLibSSE
     GIT_TAG        v3.7.0
     GIT_SHALLOW    TRUE)
 
-FetchContent_MakeAvailable(spdlog rapidcsv nlohmann_json simpleini)
+FetchContent_MakeAvailable(fmt spdlog rapidcsv nlohmann_json simpleini)
 # CommonLibSSE-NG does find_path(RAPIDCSV_INCLUDE_DIRS "rapidcsv.h"); point it at the fetched header.
 set(RAPIDCSV_INCLUDE_DIRS "${rapidcsv_SOURCE_DIR}/src" CACHE PATH "" FORCE)
 FetchContent_MakeAvailable(CommonLibSSE)

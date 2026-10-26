@@ -95,7 +95,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 {
     InitLogging();
     const auto& module = REL::Module::get();
-    logger::info("SaveStateTransfer v{} loading; runtime {} ({})", SST_VERSION_STRING, module.version().string(),
+    logger::info("SaveStateTransfer v{} loading; runtime {} ({})", SST_VERSION_STRING, module.version().string("."),
         REL::Module::IsVR() ? "VR" : (REL::Module::IsAE() ? "AE" : "SE"));
 
     SKSE::Init(a_skse);
