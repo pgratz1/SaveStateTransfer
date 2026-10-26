@@ -11,6 +11,13 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
+
+if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # clang-cl: CommonLibSSE-NG depends on MSVC's delayed template parsing (/Zc:twoPhase-) and
+    # permissive dependent-name lookup. Apply to every target, including fetched ones.
+    add_compile_options(/Zc:twoPhase- -Wno-microsoft -Wno-unknown-pragmas -Wno-unused-command-line-argument
+        -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable -Wno-deprecated-declarations)
+endif()
 # We never install; this also disables CommonLibSSE-NG's install(EXPORT) rules, which cannot
 # export source-fetched fmt/spdlog targets.
 set(CMAKE_SKIP_INSTALL_RULES ON)
@@ -66,6 +73,20 @@ FetchContent_MakeAvailable(fmt spdlog rapidcsv nlohmann_json simpleini)
 # CommonLibSSE-NG does find_path(RAPIDCSV_INCLUDE_DIRS "rapidcsv.h"); point it at the fetched header.
 set(RAPIDCSV_INCLUDE_DIRS "${rapidcsv_SOURCE_DIR}/src" CACHE PATH "" FORCE)
 FetchContent_MakeAvailable(CommonLibSSE)
+if(CMAKE_HOST_UNIX AND MSVC)
+    # Cross-linking from a case-sensitive host: NG links "Version.lib" etc. while the SDK files are lowercase.
+    # Provide case-matching symlinks in the build tree instead of touching the SDK.
+    set(_caselib_dir "${CMAKE_BINARY_DIR}/winsdk-caselinks")
+    file(MAKE_DIRECTORY "${_caselib_dir}")
+    foreach(_lib Advapi32 D3D11 d3dcompiler Dbghelp DXGI Ole32 Version User32 Kernel32 Shell32 Shlwapi)
+        string(TOLOWER "${_lib}" _lower)
+        set(_src "${XWIN_ROOT}/sdk/lib/um/x86_64/${_lower}.lib")
+        if(EXISTS "${_src}" AND NOT EXISTS "${_caselib_dir}/${_lib}.lib")
+            file(CREATE_LINK "${_src}" "${_caselib_dir}/${_lib}.lib" SYMBOLIC)
+        endif()
+    endforeach()
+    target_link_directories(CommonLibSSE PUBLIC "${_caselib_dir}")
+endif()
 target_include_directories(CommonLibSSE SYSTEM PUBLIC "$<BUILD_INTERFACE:${rapidcsv_SOURCE_DIR}/src>")
 
 # --- plugin ----------------------------------------------------------------------------------
@@ -86,8 +107,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE CommonLibSSE::CommonLibSSE spdlog:
 target_compile_definitions(${PROJECT_NAME} PRIVATE SST_VERSION_STRING="${PROJECT_VERSION}")
 
 if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /EHsc /utf-8 /permissive- /Zc:preprocessor /W4
-        $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-pragmas -Wno-unused-parameter -Wno-microsoft-include>)
+    target_compile_options(${PROJECT_NAME} PRIVATE /EHsc /utf-8 /W4
+        $<$<NOT:$<CXX_COMPILER_ID:Clang>>:/permissive- /Zc:preprocessor>)
     target_link_options(${PROJECT_NAME} PRIVATE /DEBUG:FULL)
 endif()
 
