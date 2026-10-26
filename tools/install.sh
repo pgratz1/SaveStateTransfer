@@ -12,7 +12,7 @@ MOD="SaveStateTransfer"
 DEST="$MO2/mods/$MOD"
 
 [ -f "$STAGE/SKSE/Plugins/$MOD.dll" ] || { echo "no $MOD.dll under $STAGE" >&2; exit 1; }
-if pgrep -fa "ModOrganizer.exe|SkyrimVR.exe|sksevr_loader.exe" >/dev/null; then
+if pgrep -f "[M]odOrganizer\.exe|[S]kyrimVR\.exe|[s]ksevr_loader" >/dev/null; then
     echo "MO2 or the game is running; close them first (MO2 rewrites modlist.txt on exit)." >&2
     exit 2
 fi
