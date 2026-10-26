@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pgratz1/SaveStateTransfer/tools/schema/v1.schema.json",
+  "title": "SaveStateTransfer export, schema 1",
+  "type": "object",
+  "required": ["schema", "tool", "source", "character", "world"],
+  "properties": {
+    "schema": { "const": 1 },
+    "tool": {
+      "type": "object",
+      "required": ["name", "version", "runtime"],
+      "properties": {
+        "name": { "const": "SaveStateTransfer" },
+        "version": { "type": "string" },
+        "runtime": { "type": "string" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["exportedAt", "loadOrder"],
+      "properties": {
+        "exportedAt": { "type": "string" },
+        "saveName": { "type": "string" },
+        "playerName": { "type": "string" },
+        "loadOrder": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "character": {
+      "type": "object",
+      "required": ["name", "race", "female", "progression", "magic", "inventory"],
+      "properties": {
+        "name": { "type": "string" },
+        "race": { "$ref": "#/$defs/formKey" },
+        "female": { "type": "boolean" },
+        "height": { "type": "number" },
+        "weight": { "type": "number" },
+        "appearance": {
+          "type": "object",
+          "properties": {
+            "headParts": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+            "faceMorphs": { "type": "array", "items": { "type": "number" } },
+            "faceParts": { "type": "array", "items": { "type": "integer" } },
+            "hairColor": { "$ref": "#/$defs/formKey" },
+            "bodyTint": { "$ref": "#/$defs/color" },
+            "tints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["index", "color", "alpha"],
+                "properties": {
+                  "index": { "type": "integer" },
+                  "color": { "$ref": "#/$defs/color" },
+                  "alpha": { "type": "number" },
+                  "preset": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "progression": {
+          "type": "object",
+          "required": ["level", "skills", "perks"],
+          "properties": {
+            "level": { "type": "integer", "minimum": 1 },
+            "xp": { "type": "number" },
+            "xpThreshold": { "type": "number" },
+            "perkPoints": { "type": "integer" },
+            "skills": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "required": ["level"],
+                "properties": {
+                  "level": { "type": "number" },
+                  "xp": { "type": "number" },
+                  "threshold": { "type": "number" },
+                  "legendary": { "type": "integer" }
+                }
+              }
+            },
+            "attributes": { "type": "object", "additionalProperties": { "type": "number" } },
+            "dragonSouls": { "type": "number" },
+            "perks": { "type": "array", "items": { "$ref": "#/$defs/formKey" } }
+          }
+        },
+        "magic": {
+          "type": "object",
+          "properties": {
+            "spells": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+            "shouts": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+            "wordsKnown": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+            "wordsUnlocked": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+            "favorites": {
+              "type": "object",
+              "properties": {
+                "spells": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+                "hotkeys": { "type": "array", "items": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/formKey" }] } }
+              }
+            }
+          }
+        },
+        "inventory": {
+          "type": "object",
+          "required": ["gold", "items"],
+          "properties": {
+            "gold": { "type": "integer" },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["form", "count"],
+                "properties": {
+                  "form": { "$ref": "#/$defs/formKey" },
+                  "count": { "type": "integer" },
+                  "health": { "type": "number" },
+                  "charge": { "type": "number" },
+                  "soul": { "type": "integer" },
+                  "name": { "type": "string" },
+                  "equippedSlot": { "type": "string" },
+                  "favorite": { "type": "boolean" },
+                  "customEnchant": {
+                    "type": "object",
+                    "properties": {
+                      "effects": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": ["effect", "mag"],
+                          "properties": {
+                            "effect": { "$ref": "#/$defs/formKey" },
+                            "mag": { "type": "number" },
+                            "dur": { "type": "number" },
+                            "area": { "type": "number" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "unresolvable": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["formID", "reason"],
+                "properties": {
+                  "formID": { "type": "string" },
+                  "name": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "world": {
+      "type": "object",
+      "properties": {
+        "quests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["form", "running", "completed", "stopped", "currentStage", "doneStages"],
+            "properties": {
+              "form": { "$ref": "#/$defs/formKey" },
+              "editorId": { "type": "string" },
+              "running": { "type": "boolean" },
+              "completed": { "type": "boolean" },
+              "stopped": { "type": "boolean" },
+              "currentStage": { "type": "integer" },
+              "doneStages": { "type": "array", "items": { "type": "integer" } },
+              "objectives": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["index", "state"],
+                  "properties": {
+                    "index": { "type": "integer" },
+                    "state": { "enum": ["dormant", "displayed", "completed", "failed"] }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "factions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["form", "rank"],
+            "properties": {
+              "form": { "$ref": "#/$defs/formKey" },
+              "rank": { "type": "integer" },
+              "crimeGold": { "type": "integer" },
+              "crimeGoldViolent": { "type": "integer" }
+            }
+          }
+        },
+        "globals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["form", "value"],
+            "properties": { "form": { "$ref": "#/$defs/formKey" }, "value": { "type": "number" } }
+          }
+        },
+        "locationsCleared": { "type": "array", "items": { "$ref": "#/$defs/formKey" } },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["form", "dead", "disabled"],
+            "properties": {
+              "form": { "$ref": "#/$defs/formKey" },
+              "dead": { "type": "boolean" },
+              "disabled": { "type": "boolean" }
+            }
+          }
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["form", "enabled"],
+            "properties": { "form": { "$ref": "#/$defs/formKey" }, "enabled": { "type": "boolean" } }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "formKey": {
+      "type": "object",
+      "required": ["plugin", "id"],
+      "properties": {
+        "plugin": { "type": "string", "pattern": "^.+\\.(?i:es[mpl])$" },
+        "id": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{1,6}$" }
+      },
+      "additionalProperties": false
+    },
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+  }
+}
