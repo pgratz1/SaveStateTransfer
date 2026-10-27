@@ -22,3 +22,11 @@
 * `data loaded: N full plugins, M light plugins`, `round trip Skyrim.esm|0x13746 -> ... -> OK`, three `ESL round trip ... OK`
 * `hotkeys installed`, `command-file watcher polling ...`
 * after `touch export.cmd`: `export requested (source=command file ...)`
+
+## Runtime gotchas (learned in M0)
+* The Proton prefix ships msvcp140.dll 14.00.24215 (2016). STL headers >= 14.40 need `_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR`
+  or the first `std::mutex` lock faults (seen in `REL::Module::get()`); applied globally in CMakeLists.txt.
+* CommonLibSSE-NG 3.7.0 reports 0 light plugins on VR. `core/LoadOrder` queries skyrimvresl's
+  `GetCompiledFileCollectionExtern()` instead. Form ownership is derived from the form id's index bits, never from
+  `TESForm::GetFile(0)` (which returned a late override for Skyrim.esm records).
+* M0 accepted 2026-10-26: 138 full + 154 light plugins, all FormKey round trips OK.
