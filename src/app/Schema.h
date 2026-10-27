@@ -9,10 +9,12 @@ namespace sst::schema {
     using json = nlohmann::json;
 
     struct Tint {
-        std::uint32_t index = 0;
+        std::uint32_t index = 0;        // position in the player's tint mask list
+        std::uint32_t type = 0;         // TintMask type (6 = skin tone, 7 = war paint, ...)
+        std::string   texture;          // mask texture path, used to match masks across races/presets
         std::string   color = "#000000";
         float         alpha = 0.0f;
-        std::uint32_t preset = 0;
+        std::uint32_t preset = 0;       // only used for TESNPC::Layer tints (NPCs); 0 for the player
     };
 
     struct Appearance {
@@ -136,8 +138,8 @@ namespace sst::schema {
     }
 
     // --- serializers -------------------------------------------------------------------------
-    inline void to_json(json& j, const Tint& t) { j = { { "index", t.index }, { "color", t.color }, { "alpha", t.alpha }, { "preset", t.preset } }; }
-    inline void from_json(const json& j, Tint& t) { Get(j, "index", t.index); Get(j, "color", t.color); Get(j, "alpha", t.alpha); Get(j, "preset", t.preset); }
+    inline void to_json(json& j, const Tint& t) { j = { { "index", t.index }, { "type", t.type }, { "texture", t.texture }, { "color", t.color }, { "alpha", t.alpha }, { "preset", t.preset } }; }
+    inline void from_json(const json& j, Tint& t) { Get(j, "index", t.index); Get(j, "type", t.type); Get(j, "texture", t.texture); Get(j, "color", t.color); Get(j, "alpha", t.alpha); Get(j, "preset", t.preset); }
 
     inline void to_json(json& j, const Appearance& a)
     {
