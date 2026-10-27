@@ -3,6 +3,7 @@
 #include "app/Requests.h"
 #include "core/Config.h"
 #include "core/FormKey.h"
+#include "core/LoadOrder.h"
 #include "core/Paths.h"
 #include "trigger/Hotkeys.h"
 #include "trigger/TriggerFile.h"
@@ -37,48 +38,50 @@ namespace {
         BootTrace("  logger ready");
     }
 
-    // M0 acceptance check: the load order is visible and ESL-flagged plugins round-trip through FormKey.
+    // M0 acceptance check: the load order is visible and forms from full and light plugins round-trip.
     void LogLoadOrderDiagnostics()
     {
-        auto* dh = RE::TESDataHandler::GetSingleton();
-        if (!dh) {
-            logger::error("TESDataHandler unavailable");
+        sst::core::LoadOrder::Init();
+        if (!sst::core::LoadOrder::IsInitialized()) {
             return;
         }
-        logger::info("data loaded: {} full plugins, {} light plugins", dh->GetLoadedModCount(), dh->GetLoadedLightModCount());
+        using sst::core::FormKey;
+        auto test = [](const char* a_label, const RE::TESForm* a_form) {
+            if (!a_form) {
+                logger::warn("{}: no form", a_label);
+                return;
+            }
+            const auto key = FormKey::From(a_form);
+            const auto* back = key.Resolve();
+            logger::info("{}: 0x{:08X} -> {} -> {}", a_label, a_form->GetFormID(), key.ToString(),
+                back == a_form ? "OK" : (back ? "WRONG FORM" : "UNRESOLVED"));
+        };
+        test("full-plugin round trip", RE::TESForm::LookupByID(0x13746));  // NordRace, Skyrim.esm
 
-        // Full-plugin round trip.
-        if (auto* nord = dh->LookupForm(0x13746, "Skyrim.esm"sv)) {
-            const auto key = sst::core::FormKey::From(nord);
-            logger::info("round trip Skyrim.esm|0x13746 -> {} -> {}", key.ToString(), key.Resolve() == nord ? "OK" : "MISMATCH");
-        } else {
-            logger::error("LookupForm(Skyrim.esm, 0x13746) failed");
-        }
-
-        // Light-plugin round trip: first form owned by an ESL-flagged file.
         auto [map, lock] = RE::TESForm::GetAllForms();
         const RE::BSReadLockGuard guard{ lock };
         if (!map) {
             return;
         }
-        std::size_t checked = 0;
+        std::size_t light = 0, lastFull = 0;
         for (const auto& [id, form] : *map) {
-            if (!form || form->IsDynamicForm()) {
+            if (!form) {
                 continue;
             }
-            const auto* file = form->GetFile(0);
-            if (!file || !file->IsLight()) {
-                continue;
+            const auto hi = id >> 24;
+            if (hi == 0xFE && light < 3) {
+                test("light-plugin round trip", form);
+                ++light;
+            } else if (hi != 0xFE && hi != 0xFF && hi >= 0x80 && lastFull < 2) {
+                test("late full-plugin round trip", form);
+                ++lastFull;
             }
-            const auto key = sst::core::FormKey::From(form);
-            const auto* back = key.Resolve();
-            logger::info("ESL round trip 0x{:08X} -> {} -> {}", id, key.ToString(), back == form ? "OK" : (back ? "WRONG FORM" : "UNRESOLVED"));
-            if (++checked >= 3) {
+            if (light >= 3 && lastFull >= 2) {
                 break;
             }
         }
-        if (checked == 0) {
-            logger::warn("no light-plugin forms found to test");
+        if (light == 0) {
+            logger::warn("no light-plugin (0xFE) forms present");
         }
     }
 

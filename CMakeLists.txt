@@ -21,7 +21,7 @@ if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # clang-cl: CommonLibSSE-NG depends on MSVC's delayed template parsing (/Zc:twoPhase-) and
     # permissive dependent-name lookup. Apply to every target, including fetched ones.
     add_compile_options(/Zc:twoPhase- -Wno-microsoft -Wno-unknown-pragmas -Wno-unused-command-line-argument
-        -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable -Wno-deprecated-declarations)
+        -Wno-unused-parameter -Wno-unused-variable -Wno-unused-but-set-variable -Wno-deprecated-declarations -Wno-delayed-template-parsing-in-cxx20)
 endif()
 # We never install; this also disables CommonLibSSE-NG's install(EXPORT) rules, which cannot
 # export source-fetched fmt/spdlog targets.
@@ -104,6 +104,7 @@ add_library(${PROJECT_NAME} SHARED
     src/core/Paths.cpp
     src/core/Config.cpp
     src/core/FormKey.cpp
+    src/core/LoadOrder.cpp
     src/trigger/Hotkeys.cpp
     src/trigger/TriggerFile.cpp
 )

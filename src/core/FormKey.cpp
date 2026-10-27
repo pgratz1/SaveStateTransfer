@@ -1,5 +1,7 @@
 #include "core/FormKey.h"
 
+#include "core/LoadOrder.h"
+
 namespace sst::core {
     std::string FormKey::ToString() const
     {
@@ -9,15 +11,16 @@ namespace sst::core {
     FormKey FormKey::From(const RE::TESForm* a_form)
     {
         FormKey key;
-        if (!a_form || a_form->IsDynamicForm()) {
+        if (!a_form) {
             return key;
         }
-        const auto* file = a_form->GetFile(0);
-        if (!file) {
+        const auto id = a_form->GetFormID();
+        const auto* owner = LoadOrder::OwnerOf(id);  // nullptr for dynamic (0xFF) and unknown indices
+        if (!owner) {
             return key;
         }
-        key.plugin = std::string(file->GetFilename());
-        key.localId = a_form->GetLocalFormID();
+        key.plugin = owner->name;
+        key.localId = owner->light ? (id & 0xFFF) : (id & 0xFFFFFF);
         return key;
     }
 
@@ -26,8 +29,13 @@ namespace sst::core {
         if (!IsValid()) {
             return nullptr;
         }
-        auto* dh = RE::TESDataHandler::GetSingleton();
-        return dh ? dh->LookupForm(localId, plugin) : nullptr;
+        const auto* owner = LoadOrder::FindByName(plugin);
+        if (!owner) {
+            return nullptr;
+        }
+        const RE::FormID id = owner->light ? (0xFE000000u | (owner->index << 12) | (localId & 0xFFF)) :
+                                             ((owner->index << 24) | (localId & 0xFFFFFF));
+        return RE::TESForm::LookupByID(id);
     }
 
     void to_json(nlohmann::json& j, const FormKey& k)
