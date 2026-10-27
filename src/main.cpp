@@ -1,4 +1,5 @@
 #include "Version.h"
+#include "core/BootTrace.h"
 #include "app/Requests.h"
 #include "core/Config.h"
 #include "core/FormKey.h"
@@ -93,21 +94,39 @@ SKSEPluginInfo(
 
 SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 {
-    InitLogging();
-    const auto& module = REL::Module::get();
-    logger::info("SaveStateTransfer v{} loading; runtime {} ({})", SST_VERSION_STRING, module.version().string("."),
-        REL::Module::IsVR() ? "VR" : (REL::Module::IsAE() ? "AE" : "SE"));
+    using sst::core::BootTrace;
+    BootTrace("--- SKSEPlugin_Load");
+    try {
+        BootTrace("init logging");
+        InitLogging();
+        BootTrace("query runtime");
+        const auto& module = REL::Module::get();
+        const bool isVR = REL::Module::IsVR();
+        logger::info("SaveStateTransfer v{} loading; runtime {} ({})", SST_VERSION_STRING, module.version().string("."),
+            isVR ? "VR" : (REL::Module::IsAE() ? "AE" : "SE"));
 
-    SKSE::Init(a_skse);
+        BootTrace("SKSE::Init");
+        SKSE::Init(a_skse);
 
-    if (!sst::core::Paths::Init()) {
-        logger::error("could not determine data directory");
+        BootTrace("paths");
+        if (!sst::core::Paths::Init()) {
+            logger::error("could not determine data directory");
+            return false;
+        }
+        logger::info("data root: {}", sst::core::Paths::Root().string());
+        BootTrace("config");
+        sst::core::Config::Load();
+
+        BootTrace("messaging");
+        SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
+        logger::info("loaded");
+        BootTrace("load OK");
+        return true;
+    } catch (const std::exception& e) {
+        BootTrace((std::string("EXCEPTION: ") + e.what()).c_str());
+        return false;
+    } catch (...) {
+        BootTrace("EXCEPTION: unknown");
         return false;
     }
-    logger::info("data root: {}", sst::core::Paths::Root().string());
-    sst::core::Config::Load();
-
-    SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-    logger::info("loaded");
-    return true;
 }

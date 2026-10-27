@@ -95,6 +95,7 @@ configure_file(src/Version.h.in "${CMAKE_CURRENT_BINARY_DIR}/include/Version.h" 
 add_library(${PROJECT_NAME} SHARED
     src/main.cpp
     src/app/Requests.cpp
+    src/core/BootTrace.cpp
     src/core/Paths.cpp
     src/core/Config.cpp
     src/core/FormKey.cpp
