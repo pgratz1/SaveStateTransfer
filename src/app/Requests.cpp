@@ -23,9 +23,11 @@ namespace sst::app {
             logger::warn("  player not loaded; request ignored");
             return;
         }
+        // In VR the game pauses whenever the headset is off (which is exactly when a Linux shell drives us),
+        // so a paused game is not a reason to refuse. Character data can be read and written while paused;
+        // the quest replay (M1b) needs the Papyrus VM running and will check this itself.
         if (ui && ui->GameIsPaused()) {
-            logger::warn("  game is paused / menu open; request ignored");
-            return;
+            logger::info("  note: game is paused / menu open");
         }
         switch (a_kind) {
         case RequestKind::kExport:
