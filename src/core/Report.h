@@ -9,6 +9,7 @@ namespace sst::core {
         void Skipped(std::string_view a_section, const std::string& a_what, std::string_view a_reason);
         void Error(std::string_view a_section, const std::string& a_what, std::string_view a_reason);
         void Verify(std::string_view a_section, const std::string& a_what, std::string_view a_note);
+        void Action(std::string_view a_section, const std::string& a_what, std::string_view a_detail);  // planned/performed step
         void Count(std::string_view a_section, std::string_view a_counter, int a_delta = 1);
 
         nlohmann::json ToJson() const;
@@ -19,7 +20,7 @@ namespace sst::core {
         struct Entry {
             std::string section, what, reason;
         };
-        std::vector<Entry>                         _missing, _skipped, _errors, _verify;
+        std::vector<Entry>                         _missing, _skipped, _errors, _verify, _actions;
         std::map<std::string, std::map<std::string, int>> _counts;
     };
 }

@@ -8,6 +8,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <deque>
+#include <functional>
 #include <filesystem>
 #include <fstream>
 #include <map>

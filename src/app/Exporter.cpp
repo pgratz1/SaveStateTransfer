@@ -3,6 +3,7 @@
 #include "Version.h"
 #include "app/Schema.h"
 #include "character/Character.h"
+#include "world/World.h"
 #include "core/LoadOrder.h"
 #include "core/Paths.h"
 #include "core/Report.h"
@@ -44,6 +45,10 @@ namespace sst::app {
         character::ExportProgression(player, ex.character.progression, report);
         character::ExportMagic(player, ex.character.magic, report);
         character::ExportInventory(player, ex.character.inventory, report);
+        world::ExportQuests(ex.world, report);
+        world::ExportFactions(player, ex.world, report);
+        world::ExportGlobals(ex.world, report);
+        world::ExportLocations(ex.world, report);
 
         if (a_name.empty()) {
             a_name = std::format("{}_{}", ex.source.playerName.empty() ? "player" : ex.source.playerName, Timestamp("{:%Y%m%d-%H%M%S}"));

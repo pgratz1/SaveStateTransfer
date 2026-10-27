@@ -105,6 +105,58 @@ namespace sst::schema {
         Inventory   inventory;
     };
 
+    // --- world ------------------------------------------------------------------------------
+    struct Objective {
+        std::uint32_t index = 0;
+        int           state = 0;  // QUEST_OBJECTIVE_STATE: 0 dormant, 1 displayed, 2 completed, 3 completed+displayed, 4 failed, 5 failed+displayed
+    };
+
+    struct QuestState {
+        FormKey                    form;
+        std::string                editorId;
+        bool                       running = false;
+        bool                       completed = false;
+        bool                       stopped = false;
+        bool                       startsEnabled = false;
+        bool                       storyManager = false;  // has a story-manager event (radiant/instanced)
+        int                        type = 0;              // QUEST_DATA::Type
+        std::uint32_t              currentStage = 0;
+        std::vector<std::uint32_t> doneStages;
+        std::vector<Objective>     objectives;
+    };
+
+    struct FactionState {
+        FormKey form;
+        int     rank = -1;  // -1 = not a member (record exists for crime gold)
+        int     crimeGold = 0;
+        int     crimeGoldViolent = 0;
+    };
+
+    struct GlobalState {
+        FormKey form;
+        float   value = 0.0f;
+    };
+
+    struct ActorState {  // M2
+        FormKey form;
+        bool    dead = false;
+        bool    disabled = false;
+    };
+
+    struct ReferenceState {  // M2
+        FormKey form;
+        bool    enabled = true;
+    };
+
+    struct World {
+        std::vector<QuestState>     quests;
+        std::vector<FactionState>   factions;
+        std::vector<GlobalState>    globals;
+        std::vector<FormKey>        locationsCleared;
+        std::vector<ActorState>     actors;
+        std::vector<ReferenceState> references;
+    };
+
     struct Source {
         std::string              exportedAt;
         std::string              saveName;
@@ -118,7 +170,7 @@ namespace sst::schema {
         std::string runtime;
         Source      source;
         Character   character;
-        json        world = json::object();  // M1b/M2 fill this
+        World       world;
     };
 
     // --- helpers -----------------------------------------------------------------------------
@@ -246,6 +298,45 @@ namespace sst::schema {
         Get(j, "appearance", c.appearance); Get(j, "progression", c.progression); Get(j, "magic", c.magic); Get(j, "inventory", c.inventory);
     }
 
+    inline void to_json(json& j, const Objective& o) { j = { { "index", o.index }, { "state", o.state } }; }
+    inline void from_json(const json& j, Objective& o) { Get(j, "index", o.index); Get(j, "state", o.state); }
+
+    inline void to_json(json& j, const QuestState& q)
+    {
+        j = { { "form", q.form }, { "editorId", q.editorId }, { "running", q.running }, { "completed", q.completed }, { "stopped", q.stopped },
+              { "startsEnabled", q.startsEnabled }, { "storyManager", q.storyManager }, { "type", q.type }, { "currentStage", q.currentStage },
+              { "doneStages", q.doneStages }, { "objectives", q.objectives } };
+    }
+    inline void from_json(const json& j, QuestState& q)
+    {
+        Get(j, "form", q.form); Get(j, "editorId", q.editorId); Get(j, "running", q.running); Get(j, "completed", q.completed); Get(j, "stopped", q.stopped);
+        Get(j, "startsEnabled", q.startsEnabled); Get(j, "storyManager", q.storyManager); Get(j, "type", q.type); Get(j, "currentStage", q.currentStage);
+        Get(j, "doneStages", q.doneStages); Get(j, "objectives", q.objectives);
+    }
+
+    inline void to_json(json& j, const FactionState& f) { j = { { "form", f.form }, { "rank", f.rank }, { "crimeGold", f.crimeGold }, { "crimeGoldViolent", f.crimeGoldViolent } }; }
+    inline void from_json(const json& j, FactionState& f) { Get(j, "form", f.form); Get(j, "rank", f.rank); Get(j, "crimeGold", f.crimeGold); Get(j, "crimeGoldViolent", f.crimeGoldViolent); }
+
+    inline void to_json(json& j, const GlobalState& g) { j = { { "form", g.form }, { "value", g.value } }; }
+    inline void from_json(const json& j, GlobalState& g) { Get(j, "form", g.form); Get(j, "value", g.value); }
+
+    inline void to_json(json& j, const ActorState& a) { j = { { "form", a.form }, { "dead", a.dead }, { "disabled", a.disabled } }; }
+    inline void from_json(const json& j, ActorState& a) { Get(j, "form", a.form); Get(j, "dead", a.dead); Get(j, "disabled", a.disabled); }
+
+    inline void to_json(json& j, const ReferenceState& r) { j = { { "form", r.form }, { "enabled", r.enabled } }; }
+    inline void from_json(const json& j, ReferenceState& r) { Get(j, "form", r.form); Get(j, "enabled", r.enabled); }
+
+    inline void to_json(json& j, const World& w)
+    {
+        j = { { "quests", w.quests }, { "factions", w.factions }, { "globals", w.globals }, { "locationsCleared", w.locationsCleared },
+              { "actors", w.actors }, { "references", w.references } };
+    }
+    inline void from_json(const json& j, World& w)
+    {
+        Get(j, "quests", w.quests); Get(j, "factions", w.factions); Get(j, "globals", w.globals); Get(j, "locationsCleared", w.locationsCleared);
+        Get(j, "actors", w.actors); Get(j, "references", w.references);
+    }
+
     inline void to_json(json& j, const Source& s) { j = { { "exportedAt", s.exportedAt }, { "saveName", s.saveName }, { "playerName", s.playerName }, { "loadOrder", s.loadOrder } }; }
     inline void from_json(const json& j, Source& s) { Get(j, "exportedAt", s.exportedAt); Get(j, "saveName", s.saveName); Get(j, "playerName", s.playerName); Get(j, "loadOrder", s.loadOrder); }
 
@@ -261,7 +352,6 @@ namespace sst::schema {
         if (auto it = j.find("tool"); it != j.end()) {
             Get(*it, "version", e.toolVersion); Get(*it, "runtime", e.runtime);
         }
-        Get(j, "source", e.source); Get(j, "character", e.character);
-        if (auto it = j.find("world"); it != j.end()) e.world = *it;
+        Get(j, "source", e.source); Get(j, "character", e.character); Get(j, "world", e.world);
     }
 }

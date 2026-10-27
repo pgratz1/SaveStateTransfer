@@ -2,6 +2,8 @@
 
 #include "app/Schema.h"
 #include "character/Character.h"
+#include "core/Sequencer.h"
+#include "world/World.h"
 #include "core/Paths.h"
 #include "core/Report.h"
 
@@ -79,20 +81,47 @@ namespace sst::app {
         logger::info("{} {} (player '{}', exported {}, {} plugins in source)", a_dryRun ? "dry run of" : "importing", path->filename().string(),
             ex.source.playerName, ex.source.exportedAt, ex.source.loadOrder.size());
 
-        core::Report report;
+        auto report = std::make_shared<core::Report>();
         auto* player = RE::PlayerCharacter::GetSingleton();
-        if (a_dryRun) {
-            DryRunCharacter(ex.character, report);
-        } else {
-            character::ImportAppearance(player, ex.character, report);
-            character::ImportProgression(player, ex.character.progression, report);
-            character::ImportMagic(player, ex.character.magic, report);
-            character::ImportInventory(player, ex.character.inventory, report);
-        }
         const auto stem = path->stem().string();
-        report.Write(core::Paths::Reports() / (stem + (a_dryRun ? ".dryrun.report.json" : ".import.report.json")));
-        report.LogSummary(a_dryRun ? "dry run" : "import");
-        RE::DebugNotification(std::format("SaveStateTransfer: {} {}", a_dryRun ? "dry run done for" : "imported", path->filename().string()).c_str());
+        const auto reportPath = core::Paths::Reports() / (stem + (a_dryRun ? ".dryrun.report.json" : ".import.report.json"));
+        const auto fileName = path->filename().string();
+
+        // The sequencer must outlive this call; one import at a time.
+        static core::Sequencer seq;
+        if (seq.IsRunning()) {
+            logger::warn("import: previous import still running; request ignored");
+            return false;
+        }
+        seq = core::Sequencer{};
+
+        if (a_dryRun) {
+            DryRunCharacter(ex.character, *report);
+        } else {
+            character::ImportAppearance(player, ex.character, *report);
+            character::ImportProgression(player, ex.character.progression, *report);
+            character::ImportMagic(player, ex.character.magic, *report);
+            character::ImportInventory(player, ex.character.inventory, *report);
+        }
+        // World: quests first (fragments may touch globals/factions), then factions, globals, locations.
+        world::PlanQuests(ex.world, seq, *report, a_dryRun);
+        world::PlanFactions(player, ex.world, seq, *report, a_dryRun);
+        world::PlanGlobals(ex.world, seq, *report, a_dryRun);
+        world::PlanLocations(ex.world, seq, *report, a_dryRun);
+
+        if (a_dryRun) {
+            report->Write(reportPath);
+            report->LogSummary("dry run");
+            RE::DebugNotification(std::format("SaveStateTransfer: dry run done for {}", fileName).c_str());
+            return true;
+        }
+        report->LogSummary("import (character applied, world queued)");
+        seq.Add([report, reportPath, fileName] {
+            report->Write(reportPath);
+            report->LogSummary("import complete");
+            RE::DebugNotification(std::format("SaveStateTransfer: imported {}", fileName).c_str());
+        }, 0);
+        seq.Start("world import");
         return true;
     }
 }

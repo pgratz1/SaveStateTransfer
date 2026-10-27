@@ -107,6 +107,12 @@ add_library(${PROJECT_NAME} SHARED
     src/character/Magic.cpp
     src/character/Inventory.cpp
     src/core/Report.cpp
+    src/core/Sequencer.cpp
+    src/world/QuestFilter.cpp
+    src/world/Quests.cpp
+    src/world/Factions.cpp
+    src/world/Globals.cpp
+    src/world/Locations.cpp
     src/core/ConsoleExec.cpp
     src/core/BootTrace.cpp
     src/core/Paths.cpp

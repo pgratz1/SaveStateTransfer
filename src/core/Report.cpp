@@ -5,6 +5,7 @@ namespace sst::core {
     void Report::Skipped(std::string_view s, const std::string& w, std::string_view r) { _skipped.push_back({ std::string(s), w, std::string(r) }); }
     void Report::Error(std::string_view s, const std::string& w, std::string_view r) { _errors.push_back({ std::string(s), w, std::string(r) }); logger::error("[{}] {}: {}", s, w, r); }
     void Report::Verify(std::string_view s, const std::string& w, std::string_view n) { _verify.push_back({ std::string(s), w, std::string(n) }); }
+    void Report::Action(std::string_view s, const std::string& w, std::string_view d) { _actions.push_back({ std::string(s), w, std::string(d) }); }
     void Report::Count(std::string_view s, std::string_view c, int d) { _counts[std::string(s)][std::string(c)] += d; }
 
     nlohmann::json Report::ToJson() const
@@ -16,12 +17,12 @@ namespace sst::core {
             }
             return arr;
         };
-        return { { "counts", _counts }, { "missing", list(_missing) }, { "skipped", list(_skipped) }, { "errors", list(_errors) }, { "verify", list(_verify) } };
+        return { { "counts", _counts }, { "missing", list(_missing) }, { "skipped", list(_skipped) }, { "errors", list(_errors) }, { "verify", list(_verify) }, { "actions", list(_actions) } };
     }
 
     void Report::LogSummary(std::string_view a_title) const
     {
-        logger::info("{}: {} missing, {} skipped, {} errors, {} to verify", a_title, _missing.size(), _skipped.size(), _errors.size(), _verify.size());
+        logger::info("{}: {} actions, {} missing, {} skipped, {} errors, {} to verify", a_title, _actions.size(), _missing.size(), _skipped.size(), _errors.size(), _verify.size());
         for (const auto& [section, counters] : _counts) {
             std::string line;
             for (const auto& [name, n] : counters) {
