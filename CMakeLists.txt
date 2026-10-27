@@ -12,6 +12,11 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
+# MSVC STL >= 14.40 makes std::mutex's constructor constexpr; binaries built with those headers fault on
+# first lock when run against an older msvcp140.dll (as shipped in Skyrim's VC redist / Proton prefixes).
+# Keep the classic constructor so the DLL works on any runtime. Applies to every target, including deps.
+add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+
 if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # clang-cl: CommonLibSSE-NG depends on MSVC's delayed template parsing (/Zc:twoPhase-) and
     # permissive dependent-name lookup. Apply to every target, including fetched ones.

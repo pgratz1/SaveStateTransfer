@@ -10,17 +10,31 @@
 namespace {
     void InitLogging()
     {
+        using sst::core::BootTrace;
+        BootTrace("  Module::get");
+        const auto& module = REL::Module::get();
+        BootTrace("  Module::version");
+        const auto ver = module.version();
+        BootTrace((std::string("  version ") + ver.string(".")).c_str());
+        BootTrace("  Module::IsVR");
+        const bool vr = REL::Module::IsVR();
+        BootTrace(vr ? "  runtime VR" : "  runtime not VR");
+        BootTrace("  log_directory");
         auto path = logger::log_directory();
         if (!path) {
+            BootTrace("  log_directory failed");
             SKSE::stl::report_and_fail("SaveStateTransfer: SKSE log directory unavailable"sv);
         }
         *path /= "SaveStateTransfer.log"sv;
+        BootTrace((std::string("  log path ") + path->string()).c_str());
         auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
+        BootTrace("  sink created");
         auto log = std::make_shared<spdlog::logger>("global", std::move(sink));
         log->set_level(spdlog::level::info);
         log->flush_on(spdlog::level::info);
         spdlog::set_default_logger(std::move(log));
         spdlog::set_pattern("[%H:%M:%S.%e] [%l] %v"s);
+        BootTrace("  logger ready");
     }
 
     // M0 acceptance check: the load order is visible and ESL-flagged plugins round-trip through FormKey.
