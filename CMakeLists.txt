@@ -100,6 +100,14 @@ configure_file(src/Version.h.in "${CMAKE_CURRENT_BINARY_DIR}/include/Version.h" 
 add_library(${PROJECT_NAME} SHARED
     src/main.cpp
     src/app/Requests.cpp
+    src/app/Exporter.cpp
+    src/app/Importer.cpp
+    src/character/Appearance.cpp
+    src/character/Progression.cpp
+    src/character/Magic.cpp
+    src/character/Inventory.cpp
+    src/core/Report.cpp
+    src/core/ConsoleExec.cpp
     src/core/BootTrace.cpp
     src/core/Paths.cpp
     src/core/Config.cpp

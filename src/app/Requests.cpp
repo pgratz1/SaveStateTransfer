@@ -1,5 +1,8 @@
 #include "app/Requests.h"
 
+#include "app/Exporter.h"
+#include "app/Importer.h"
+
 namespace sst::app {
     const char* ToString(RequestKind a_kind)
     {
@@ -24,6 +27,16 @@ namespace sst::app {
             logger::warn("  game is paused / menu open; request ignored");
             return;
         }
-        logger::info("  (M0) nothing to do yet");
+        switch (a_kind) {
+        case RequestKind::kExport:
+            RunExport(std::move(a_argument));
+            break;
+        case RequestKind::kImport:
+            RunImport(std::move(a_argument), false);
+            break;
+        case RequestKind::kDryRun:
+            RunImport(std::move(a_argument), true);
+            break;
+        }
     }
 }
