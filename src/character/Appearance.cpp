@@ -16,6 +16,18 @@ namespace sst::character {
         constexpr std::uint32_t kTintTypeSkinTone = 6;
 
         TintMaskView*       AsView(RE::TintMask* a_mask) { return reinterpret_cast<TintMaskView*>(a_mask); }
+
+        // NG 3.7.0's PlayerCharacter::GetTintList() returns nullptr on VR. SKSEVR 2.0.12 (GameReferences.h):
+        // tArray<TintMask*> tintMasks @ 0x1208, tArray<TintMask*>* overlayTintMasks @ 0x1220 (preferred when set).
+        RE::BSTArray<RE::TintMask*>* PlayerTintList(RE::PlayerCharacter* a_player)
+        {
+            if (!REL::Module::IsVR()) {
+                return a_player->GetTintList();
+            }
+            const auto base = reinterpret_cast<std::uintptr_t>(a_player);
+            auto* overlay = *reinterpret_cast<RE::BSTArray<RE::TintMask*>**>(base + 0x1220);
+            return overlay ? overlay : reinterpret_cast<RE::BSTArray<RE::TintMask*>*>(base + 0x1208);
+        }
         const TintMaskView* AsView(const RE::TintMask* a_mask) { return reinterpret_cast<const TintMaskView*>(a_mask); }
     }
 
@@ -69,7 +81,7 @@ namespace sst::character {
         }
         ap.bodyTint = ColorToHex(npc->bodyTintColor);
         // The player's face tints live on PlayerCharacter (not TESNPC::tintLayers, which is for NPCs).
-        auto* maskList = a_player->GetTintList();
+        auto* maskList = PlayerTintList(a_player);
         const auto& masks = maskList ? *maskList : RE::BSTArray<RE::TintMask*>{};
         for (std::uint32_t i = 0; i < masks.size(); ++i) {
             const auto* mask = AsView(masks[i]);
@@ -145,7 +157,7 @@ namespace sst::character {
         }
         npc->bodyTintColor = HexToColor(ap.bodyTint);
         {
-            auto* maskList = a_player->GetTintList();
+            auto* maskList = PlayerTintList(a_player);
             RE::BSTArray<RE::TintMask*> empty;
             auto& masks = maskList ? *maskList : empty;
             int applied = 0;
