@@ -30,7 +30,7 @@ def iter_form_keys(node, path="$"):
 
 
 # Vanilla masters are force-loaded and never listed in MO2's plugins.txt.
-IMPLICIT_MASTERS = {"skyrim.esm", "update.esm", "dawnguard.esm", "hearthfires.esm", "dragonborn.esm"}
+IMPLICIT_MASTERS = {"skyrim.esm", "update.esm", "dawnguard.esm", "hearthfires.esm", "dragonborn.esm", "skyrimvr.esm"}
 
 
 def load_plugins_txt(path: Path):

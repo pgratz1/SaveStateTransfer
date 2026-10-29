@@ -178,7 +178,7 @@
                   "required": ["index", "state"],
                   "properties": {
                     "index": { "type": "integer" },
-                    "state": { "enum": ["dormant", "displayed", "completed", "failed"] }
+                    "state": { "type": "integer", "minimum": 0, "maximum": 5 }
                   }
                 }
               }
