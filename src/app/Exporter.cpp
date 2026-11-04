@@ -4,6 +4,7 @@
 #include "app/Schema.h"
 #include "character/Character.h"
 #include "world/World.h"
+#include "world/QuestDiag.h"
 #include "core/LoadOrder.h"
 #include "core/Paths.h"
 #include "core/Report.h"
@@ -41,6 +42,7 @@ namespace sst::app {
         ex.source.playerName = player->GetName() ? player->GetName() : "";
         ex.source.loadOrder = core::LoadOrder::Names();
 
+        world::RunQuestDiagnostics();
         character::ExportAppearance(player, ex.character, report);
         character::ExportProgression(player, ex.character.progression, report);
         character::ExportMagic(player, ex.character.magic, report);

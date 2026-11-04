@@ -110,6 +110,7 @@ add_library(${PROJECT_NAME} SHARED
     src/core/Sequencer.cpp
     src/world/QuestFilter.cpp
     src/world/Quests.cpp
+    src/world/QuestDiag.cpp
     src/world/Factions.cpp
     src/world/Globals.cpp
     src/world/Locations.cpp
