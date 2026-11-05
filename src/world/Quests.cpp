@@ -110,15 +110,23 @@ namespace sst::world {
             // start-game-enabled quests are left alone.
             const auto* rule = FindQuestRule(q.editorId);
             std::string mode = rule ? rule->mode : "replay";
+            std::string defaultReason;
             if (!rule) {
                 if (q.storyManager) {
                     mode = "skip";
+                    defaultReason = "story-manager quest";
                 } else if (q.type == static_cast<int>(RE::QUEST_DATA::Type::kMiscellaneous)) {
                     mode = "skip";
+                    defaultReason = "miscellaneous quest";
+                } else if (q.stopped && !q.completed) {
+                    // Stopped-but-not-completed quests are almost always scene/helper quests; replaying their
+                    // stages only to stop them again re-fires spawns and scenes with no lasting benefit.
+                    mode = "skip";
+                    defaultReason = "stopped scene/helper quest";
                 }
             }
             if (mode == "skip") {
-                a_report.Skipped("quests", label, rule ? rule->reason : (q.storyManager ? "story-manager quest" : "miscellaneous quest"));
+                a_report.Skipped("quests", label, rule ? rule->reason : defaultReason);
                 ++skipped;
                 continue;
             }
