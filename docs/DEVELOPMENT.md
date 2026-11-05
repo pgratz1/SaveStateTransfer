@@ -30,3 +30,15 @@
   `GetCompiledFileCollectionExtern()` instead. Form ownership is derived from the form id's index bits, never from
   `TESForm::GetFile(0)` (which returned a late override for Skyrim.esm records).
 * M0 accepted 2026-10-26: 138 full + 154 light plugins, all FormKey round trips OK.
+
+## Crash diagnosis (2026-11-04)
+
+- Crash Logger VR is enabled in FUS but SKSE reports it "disabled, fatal error occurred while loading plugin" under
+  Proton, so there are never crash logs. The plugin's own `core/CrashProbe` (vectored exception handler) writes
+  `FATAL exception ... last step: ...` plus a probable call stack into `SaveStateTransfer.log` instead.
+- Every sequencer step carries a label; with `[Debug] bLogImportSteps=1` the label is logged right before the step
+  runs, so the last logged line names the step that crashed.
+- First real import (2026-11-04) died with no crash log while the game was paused (headset off), right after all
+  console calls failed with "script factory unavailable" (VR: the SE-mapped "factories initialized" flag is false).
+  Fixes: character phases moved into the sequencer (nothing runs while paused), console factory fallback, equip no
+  longer reuses the ExtraDataList after AddObjectToContainer.
