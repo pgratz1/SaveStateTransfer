@@ -7,14 +7,32 @@ namespace sst::world {
     using core::FormKey;
 
     namespace {
+        // Verified in-game (VR 1.4.15): TESQuest::waitingStages (as NG 3.7.0 names it) is the quest's full stage
+        // table, a list of TESQuestStage*; QUEST_STAGE_DATA::flags bit 0 is "stage done", exactly what Papyrus
+        // Quest.IsStageDone() reports. TESQuest::executedStages is something else and must not be used.
+        constexpr std::uint8_t kStageDoneBit = 0x01;
+
+        template <class F>
+        void ForEachStage(const RE::TESQuest* a_quest, F&& a_fn)
+        {
+            if (!a_quest->waitingStages) {
+                return;
+            }
+            for (auto* stage : *a_quest->waitingStages) {
+                if (stage) {
+                    a_fn(static_cast<std::uint32_t>(stage->data.index), (stage->data.flags.underlying() & kStageDoneBit) != 0);
+                }
+            }
+        }
+
         std::vector<std::uint32_t> DoneStages(const RE::TESQuest* a_quest)
         {
             std::vector<std::uint32_t> out;
-            if (a_quest->executedStages) {
-                for (const auto& stage : *a_quest->executedStages) {
-                    out.push_back(stage.data.index);
+            ForEachStage(a_quest, [&](std::uint32_t idx, bool done) {
+                if (done) {
+                    out.push_back(idx);
                 }
-            }
+            });
             std::sort(out.begin(), out.end());
             out.erase(std::unique(out.begin(), out.end()), out.end());
             return out;
@@ -22,14 +40,13 @@ namespace sst::world {
 
         bool HasStage(const RE::TESQuest* a_quest, std::uint32_t a_stage)
         {
-            if (a_quest->executedStages) {
-                for (const auto& stage : *a_quest->executedStages) {
-                    if (stage.data.index == a_stage) {
-                        return true;
-                    }
+            bool found = false;
+            ForEachStage(a_quest, [&](std::uint32_t idx, bool done) {
+                if (idx == a_stage && done) {
+                    found = true;
                 }
-            }
-            return false;
+            });
+            return found;
         }
 
         std::string Hex(const RE::TESForm* a_form) { return std::format("{:X}", a_form->GetFormID()); }
@@ -42,12 +59,13 @@ namespace sst::world {
             if (!quest) {
                 continue;
             }
-            const bool running = quest->IsRunning();
+            const bool started = quest->alreadyRun;
             const bool completed = quest->IsCompleted();
             const bool stopped = quest->IsStopped();
+            const bool running = started && !stopped && !completed;
             auto done = DoneStages(quest);
             // Only quests that have ever progressed are worth carrying.
-            if (!running && !completed && done.empty()) {
+            if (!started && !completed && done.empty()) {
                 continue;
             }
             const auto key = FormKey::From(quest);
@@ -104,7 +122,7 @@ namespace sst::world {
                 ++skipped;
                 continue;
             }
-            if (q.startsEnabled && quest->GetCurrentStageID() >= q.currentStage && (quest->IsRunning() || quest->IsCompleted())) {
+            if (q.startsEnabled && quest->alreadyRun && quest->GetCurrentStageID() >= q.currentStage) {
                 a_report.Skipped("quests", label, "start-game-enabled quest already at or past exported stage");
                 ++skipped;
                 continue;
@@ -155,7 +173,7 @@ namespace sst::world {
             } else if (q.stopped && !q.running) {
                 a_report.Action("quests", label, "stopquest");
                 if (!a_dryRun) {
-                    a_seq.Add([quest] { if (quest->IsRunning()) { core::ConsoleExec("stopquest " + Hex(quest)); } }, frames);
+                    a_seq.Add([quest] { if (!quest->IsStopped()) { core::ConsoleExec("stopquest " + Hex(quest)); } }, frames);
                 }
             }
             // Objective display states last, once the stages have run.

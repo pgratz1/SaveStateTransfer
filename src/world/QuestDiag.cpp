@@ -57,9 +57,24 @@ namespace sst::world {
                 quest->IsRunning(), quest->IsCompleted(), quest->IsStopped(), quest->GetCurrentStageID(), quest->alreadyRun);
             DumpList("executedStages", quest->executedStages);
             DumpList("waitingStages", quest->waitingStages);
+            // The waitingStages nodes point at 0x20-stride objects: dump each (first 20) as 4 qwords + u16/u8 view.
+            {
+                const auto* node = reinterpret_cast<const std::uint64_t*>(quest->waitingStages);
+                for (int i = 0; i < 20 && node && reinterpret_cast<std::uintptr_t>(node) >= 0x10000; ++i) {
+                    const auto* obj = reinterpret_cast<const std::uint64_t*>(node[0]);
+                    if (obj && reinterpret_cast<std::uintptr_t>(obj) >= 0x10000) {
+                        const auto* u16 = reinterpret_cast<const std::uint16_t*>(obj);
+                        const auto* u8 = reinterpret_cast<const std::uint8_t*>(obj);
+                        logger::info("    stageobj{} @ {:#x}: [{:016X}] [{:016X}] [{:016X}] [{:016X}]  u16@0={} u8@2={:#04x} u8@3={:#04x} u16@4={} u16@8={}",
+                            i, reinterpret_cast<std::uintptr_t>(obj), obj[0], obj[1], obj[2], obj[3], u16[0], u8[2], u8[3], u16[2], u16[4]);
+                    }
+                    node = reinterpret_cast<const std::uint64_t*>(node[1]);
+                }
+            }
             if (vm && policy) {
                 const auto handle = policy->GetHandleForObject(static_cast<RE::VMTypeID>(RE::TESQuest::FORMTYPE), quest);
-                for (std::uint32_t stage = 0; stage <= 1000; stage += 5) {
+                const bool dense = edid == "MQ102" || edid == "MQ103";
+                for (std::uint32_t stage = 0; stage <= 1000; stage += (dense && stage < 300) ? 1 : 5) {
                     RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> cb{ new StageDoneCallback(std::string(edid), stage) };
                     auto* args = RE::MakeFunctionArguments(static_cast<std::int32_t>(stage));
                     vm->DispatchMethodCall2(handle, "Quest", "IsStageDone", args, cb);
