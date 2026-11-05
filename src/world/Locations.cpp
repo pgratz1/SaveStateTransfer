@@ -40,7 +40,7 @@ namespace sst::world {
                     loc->AddChange(1u << 31);  // BGSLocation::ChangeFlags::kCleared
                 }
                 logger::info("locations: {} marked cleared", toClear.size());
-            }, 0);
+            }, 0, "locations cleared");
         }
     }
 }

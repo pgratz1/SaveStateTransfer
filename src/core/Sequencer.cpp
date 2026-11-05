@@ -1,9 +1,12 @@
 #include "core/Sequencer.h"
 
+#include "core/Config.h"
+#include "core/CrashProbe.h"
+
 namespace sst::core {
-    void Sequencer::Add(Step a_step, std::uint32_t a_framesAfter)
+    void Sequencer::Add(Step a_step, std::uint32_t a_framesAfter, std::string a_label)
     {
-        _steps.push_back({ std::move(a_step), a_framesAfter });
+        _steps.push_back({ std::move(a_step), a_framesAfter, std::move(a_label) });
     }
 
     void Sequencer::Start(std::string a_label)
@@ -39,15 +42,22 @@ namespace sst::core {
         }
         if (_steps.empty()) {
             _running = false;
+            CrashProbe::ClearStep();
             logger::info("{}: done", _label);
             return;
         }
         auto entry = std::move(_steps.front());
         _steps.pop_front();
+        if (!entry.label.empty()) {
+            CrashProbe::SetStep(_label + ": " + entry.label);
+            if (Config::Get().logImportSteps) {
+                logger::info("{}: {}", _label, entry.label);
+            }
+        }
         try {
             entry.fn();
         } catch (const std::exception& e) {
-            logger::error("{}: step threw: {}", _label, e.what());
+            logger::error("{}: step '{}' threw: {}", _label, entry.label, e.what());
         }
         _wait = entry.framesAfter;
         SKSE::GetTaskInterface()->AddTask([this] { Pump(); });

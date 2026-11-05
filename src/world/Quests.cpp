@@ -159,29 +159,27 @@ namespace sst::world {
                 a_report.Action("quests", label, std::format("setstage {}", stage));
                 ++planned;
                 if (!a_dryRun) {
-                    a_seq.Add([quest, stage, label] {
+                    a_seq.Add([quest, stage] {
                         if (!HasStage(quest, stage)) {
-                            if (core::Config::Get().logImportSteps) {
-                                logger::info("quest {}: setstage {}", label, stage);
-                            }
                             core::ConsoleExec(std::format("setstage {} {}", Hex(quest), stage));
                         }
-                    }, frames);
+                    }, frames, std::format("quest {} setstage {}", label, stage));
                 }
             }
             if (q.completed) {
                 a_report.Action("quests", label, "completequest");
                 if (!a_dryRun) {
-                    a_seq.Add([quest, label] {
+                    a_seq.Add([quest] {
                         if (!quest->IsCompleted()) {
                             core::ConsoleExec("completequest " + Hex(quest));
                         }
-                    }, frames);
+                    }, frames, std::format("quest {} completequest", label));
                 }
             } else if (q.stopped && !q.running) {
                 a_report.Action("quests", label, "stopquest");
                 if (!a_dryRun) {
-                    a_seq.Add([quest] { if (!quest->IsStopped()) { core::ConsoleExec("stopquest " + Hex(quest)); } }, frames);
+                    a_seq.Add([quest] { if (!quest->IsStopped()) { core::ConsoleExec("stopquest " + Hex(quest)); } }, frames,
+                        std::format("quest {} stopquest", label));
                 }
             }
             // Objective display states last, once the stages have run.
@@ -198,7 +196,7 @@ namespace sst::world {
                         default: break;
                         }
                     }
-                }, 0);
+                }, 0, std::format("quest {} objectives", label));
             }
             if (q.editorId.starts_with("HousePurchase") || q.editorId.starts_with("BYOH")) {
                 a_report.Verify("quests", label, "player-home quest: check ownership/keys after import");

@@ -16,6 +16,10 @@ namespace sst::character {
 
     void ExportInventory(RE::PlayerCharacter* a_player, schema::Inventory& a_out, core::Report& a_report);
     void ImportInventory(RE::PlayerCharacter* a_player, const schema::Inventory& a_in, core::Report& a_report);
+    // Applies items [a_begin, a_end) only; gold is added with the first range, the unresolvable list is reported
+    // with the last. Lets the importer spread a large inventory over several frames.
+    void ImportInventoryRange(RE::PlayerCharacter* a_player, const schema::Inventory& a_in, core::Report& a_report,
+        std::size_t a_begin, std::size_t a_end);
 
     // shared helpers
     std::string ColorToHex(const RE::Color& a_color);

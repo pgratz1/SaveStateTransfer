@@ -7,6 +7,10 @@
 #include "core/Paths.h"
 #include "core/Report.h"
 
+namespace {
+    constexpr std::size_t kItemsPerStep = 25;
+}
+
 namespace sst::app {
     namespace {
         std::optional<std::filesystem::path> PickExport(const std::string& a_name)
@@ -65,7 +69,8 @@ namespace sst::app {
             RE::DebugNotification("SaveStateTransfer: no export file found");
             return false;
         }
-        schema::Export ex;
+        auto exPtr = std::make_shared<schema::Export>();
+        auto& ex = *exPtr;
         try {
             std::ifstream in(*path);
             const auto j = nlohmann::json::parse(in);
@@ -98,10 +103,18 @@ namespace sst::app {
         if (a_dryRun) {
             DryRunCharacter(ex.character, *report);
         } else {
-            character::ImportAppearance(player, ex.character, *report);
-            character::ImportProgression(player, ex.character.progression, *report);
-            character::ImportMagic(player, ex.character.magic, *report);
-            character::ImportInventory(player, ex.character.inventory, *report);
+            // Character phases run as sequencer steps too: the sequencer only advances while the game is unpaused
+            // (in VR the headset must be on), and each phase is logged / handed to the crash probe before it runs.
+            seq.Add([player, exPtr, report] { character::ImportAppearance(player, exPtr->character, *report); }, 2, "character appearance");
+            seq.Add([player, exPtr, report] { character::ImportProgression(player, exPtr->character.progression, *report); }, 0, "character progression");
+            seq.Add([player, exPtr, report] { character::ImportMagic(player, exPtr->character.magic, *report); }, 0, "character magic");
+            const auto nItems = ex.character.inventory.items.size();
+            for (std::size_t begin = 0; begin == 0 || begin < nItems; begin += kItemsPerStep) {
+                const auto end = std::min(nItems, begin + kItemsPerStep);
+                seq.Add([player, exPtr, report, begin, end] {
+                    character::ImportInventoryRange(player, exPtr->character.inventory, *report, begin, end);
+                }, 0, std::format("character inventory {}-{} of {}", begin + 1, end, nItems));
+            }
         }
         // World: quests first (fragments may touch globals/factions), then factions, globals, locations.
         world::PlanQuests(ex.world, seq, *report, a_dryRun);
@@ -115,12 +128,15 @@ namespace sst::app {
             RE::DebugNotification(std::format("SaveStateTransfer: dry run done for {}", fileName).c_str());
             return true;
         }
-        report->LogSummary("import (character applied, world queued)");
+        report->LogSummary("import planned (character + world queued)");
+        if (auto* ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
+            logger::info("import: game is paused; steps start when it is unpaused (headset on, no menu open)");
+        }
         seq.Add([report, reportPath, fileName] {
             report->Write(reportPath);
             report->LogSummary("import complete");
             RE::DebugNotification(std::format("SaveStateTransfer: imported {}", fileName).c_str());
-        }, 0);
+        }, 0, "finish");
         seq.Start("world import");
         return true;
     }

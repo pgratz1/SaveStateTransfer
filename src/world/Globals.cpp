@@ -40,7 +40,7 @@ namespace sst::world {
                     global->value = value;
                 }
                 logger::info("globals: {} values set", changes.size());
-            }, 0);
+            }, 0, "globals");
         }
     }
 }

@@ -105,16 +105,52 @@ namespace sst::character {
         a_report.Count("inventory", "unresolvable", static_cast<int>(a_out.unresolvable.size()));
     }
 
+    namespace {
+        // After AddObjectToContainer the engine owns (and may have merged or freed) the ExtraDataList we passed in,
+        // so for equipping we look the stack up again in the player's inventory instead of reusing the pointer.
+        RE::ExtraDataList* FindOwnedList(RE::PlayerCharacter* a_player, RE::TESBoundObject* a_obj, RE::ExtraDataList* a_wanted)
+        {
+            auto* changes = a_player->GetInventoryChanges();
+            if (!changes || !changes->entryList) {
+                return nullptr;
+            }
+            for (auto* entry : *changes->entryList) {
+                if (!entry || entry->object != a_obj || !entry->extraLists) {
+                    continue;
+                }
+                RE::ExtraDataList* first = nullptr;
+                for (auto* xl : *entry->extraLists) {
+                    if (xl == a_wanted) {
+                        return xl;
+                    }
+                    if (!first) {
+                        first = xl;
+                    }
+                }
+                return first;
+            }
+            return nullptr;
+        }
+    }
+
     void ImportInventory(RE::PlayerCharacter* a_player, const schema::Inventory& a_in, core::Report& a_report)
     {
+        ImportInventoryRange(a_player, a_in, a_report, 0, a_in.items.size());
+    }
+
+    void ImportInventoryRange(RE::PlayerCharacter* a_player, const schema::Inventory& a_in, core::Report& a_report,
+        std::size_t a_begin, std::size_t a_end)
+    {
         auto* equip = RE::ActorEquipManager::GetSingleton();
-        if (a_in.gold > 0) {
+        a_end = std::min(a_end, a_in.items.size());
+        if (a_begin == 0 && a_in.gold > 0) {
             if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold001)) {
                 a_player->AddObjectToContainer(gold, nullptr, a_in.gold, nullptr);
             }
         }
         int added = 0;
-        for (const auto& item : a_in.items) {
+        for (std::size_t idx = a_begin; idx < a_end; ++idx) {
+            const auto& item = a_in.items[idx];
             auto* obj = item.form.Resolve<RE::TESBoundObject>();
             if (!obj) {
                 a_report.Missing("inventory", item.form.ToString(), item.name.empty() ? "item" : item.name);
@@ -164,12 +200,15 @@ namespace sst::character {
                 } else if (item.equippedSlot == "left") {
                     slot = HandSlot(true);
                 }
-                equip->EquipObject(a_player, obj, xList, 1, slot, true, false, false, false);
+                auto* owned = xList ? FindOwnedList(a_player, obj, xList) : nullptr;
+                equip->EquipObject(a_player, obj, owned, 1, slot, true, false, false, false);
             }
         }
         a_report.Count("inventory", "stacksAdded", added);
-        for (const auto& u : a_in.unresolvable) {
-            a_report.Skipped("inventory", u.name.empty() ? u.formID : u.name, u.reason + " in source");
+        if (a_end == a_in.items.size()) {
+            for (const auto& u : a_in.unresolvable) {
+                a_report.Skipped("inventory", u.name.empty() ? u.formID : u.name, u.reason + " in source");
+            }
         }
     }
 }

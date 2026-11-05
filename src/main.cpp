@@ -2,6 +2,7 @@
 #include "core/BootTrace.h"
 #include "app/Requests.h"
 #include "core/Config.h"
+#include "core/CrashProbe.h"
 #include "core/FormKey.h"
 #include "core/LoadOrder.h"
 #include "core/Paths.h"
@@ -124,6 +125,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 
         BootTrace("SKSE::Init");
         SKSE::Init(a_skse);
+        sst::core::CrashProbe::Install();
 
         BootTrace("paths");
         if (!sst::core::Paths::Init()) {

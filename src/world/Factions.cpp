@@ -64,7 +64,7 @@ namespace sst::world {
                         faction->SetCrimeGold(f.crimeGold);
                         faction->SetCrimeGoldViolent(f.crimeGoldViolent);
                     }
-                }, 0);
+                }, 0, std::format("faction {}", label));
             }
         }
         a_report.Count("factions", "planned", planned);
