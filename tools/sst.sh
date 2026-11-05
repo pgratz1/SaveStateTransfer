@@ -10,7 +10,7 @@ case "${1:-}" in
   log)      tail -n "${2:-40}" "$ROOT/SKSE/SaveStateTransfer.log";;
   exports)  ls -lt "$SST/exports" 2>/dev/null;;
   report)   f=$(ls -t "$SST/reports"/*.json 2>/dev/null | head -1); echo "$f"; python3 -I -m json.tool "$f" | head -n "${2:-80}";;
-  kill)     pkill -f "SkyrimVR.exe" 2>/dev/null; sleep 3; pkill -f "ModOrganizer.exe" 2>/dev/null; sleep 1
+  kill)     pkill -f "[S]kyrimVR\.exe" 2>/dev/null; sleep 3; pkill -f "[M]odOrganizer\.exe" 2>/dev/null; sleep 1
             pgrep -fa "[S]kyrimVR\.exe|[M]odOrganizer\.exe" >/dev/null && echo "still running" || echo "game and MO2 processes gone";;
   *) echo "usage: $0 export|import|dryrun [name] | log [n] | exports | report [n] | kill" >&2; exit 1;;
 esac
