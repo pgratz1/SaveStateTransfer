@@ -32,6 +32,28 @@ namespace sst::core {
         }
     }
 
+    void Report::LogMissingByPlugin() const
+    {
+        std::map<std::string, std::map<std::string, int>> bySection;
+        for (const auto& e : _missing) {
+            const auto bar = e.what.find('|');
+            bySection[e.section][bar == std::string::npos ? e.what : e.what.substr(0, bar)]++;
+        }
+        for (const auto& [section, plugins] : bySection) {
+            std::vector<std::pair<std::string, int>> v(plugins.begin(), plugins.end());
+            std::sort(v.begin(), v.end(), [](auto& a, auto& b) { return a.second > b.second; });
+            int total = 0;
+            std::string line;
+            for (std::size_t i = 0; i < v.size(); ++i) {
+                total += v[i].second;
+                if (i < 6) {
+                    line += std::format("{}{} {}", i ? ", " : "", v[i].first, v[i].second);
+                }
+            }
+            logger::info("  {}: {} missing ({}{})", section, total, line, v.size() > 6 ? ", ..." : "");
+        }
+    }
+
     bool Report::Write(const std::filesystem::path& a_path) const
     {
         std::ofstream out(a_path);

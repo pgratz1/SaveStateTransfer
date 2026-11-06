@@ -4,6 +4,7 @@
 #include "character/Character.h"
 #include "core/Sequencer.h"
 #include "world/World.h"
+#include "core/Config.h"
 #include "core/Paths.h"
 #include "core/Report.h"
 
@@ -128,13 +129,32 @@ namespace sst::app {
             RE::DebugNotification(std::format("SaveStateTransfer: dry run done for {}", fileName).c_str());
             return true;
         }
+        // Remember where the player stands: quest stage fragments may teleport them (College of Winterhold stages
+        // move the player into the courtyard, for example); the finish step moves them back.
+        RE::ObjectRefHandle homeMarker;
+        if (core::Config::Get().restorePosition) {
+            if (auto* xmarker = RE::TESForm::LookupByID<RE::TESBoundObject>(0x3B)) {  // XMarker
+                if (auto marker = player->PlaceObjectAtMe(xmarker, false)) {
+                    homeMarker = marker->CreateRefHandle();
+                }
+            }
+        }
         report->LogSummary("import planned (character + world queued)");
         if (auto* ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
             logger::info("import: game is paused; steps start when it is unpaused (headset on, no menu open)");
         }
-        seq.Add([report, reportPath, fileName] {
+        seq.Add([report, reportPath, fileName, homeMarker, player] {
+            if (auto marker = homeMarker.get()) {
+                if (player->GetParentCell() != marker->GetParentCell() || player->GetPosition().GetDistance(marker->GetPosition()) > 64.0f) {
+                    logger::info("import: moving the player back to where the import started");
+                    player->MoveTo(marker.get());
+                }
+                marker->Disable();
+                marker->SetDelete(true);
+            }
             report->Write(reportPath);
             report->LogSummary("import complete");
+            report->LogMissingByPlugin();
             RE::DebugNotification(std::format("SaveStateTransfer: imported {}", fileName).c_str());
         }, 0, "finish");
         seq.Start("world import");

@@ -1,5 +1,7 @@
 #include "character/Character.h"
 
+#include "core/Config.h"
+
 namespace sst::character {
     using core::FormKey;
     using Skill = RE::PlayerCharacter::PlayerSkills::Data::Skill;
@@ -108,11 +110,12 @@ namespace sst::character {
         }
         avOwner->SetBaseActorValue(RE::ActorValue::kDragonSouls, a_in.dragonSouls);
 
-        int added = 0;
+        int added = 0, missing = 0;
         for (const auto& key : a_in.perks) {
             auto* perk = key.Resolve<RE::BGSPerk>();
             if (!perk) {
                 a_report.Missing("progression", key.ToString(), "perk");
+                ++missing;
                 continue;
             }
             if (!a_player->HasPerk(perk)) {
@@ -120,8 +123,19 @@ namespace sst::character {
                 ++added;
             }
         }
-        a_player->GetGameStatsData().perkCount = static_cast<std::int8_t>(std::clamp(a_in.perkPoints, 0, 127));
+        // Perk trees differ between mod lists; perks that do not exist here are handed back as perk points.
+        int points = a_in.perkPoints;
+        if (missing > 0 && core::Config::Get().refundMissingPerks) {
+            points += missing;
+            a_report.Count("progression", "perkPointsRefunded", missing);
+        }
+        a_player->GetGameStatsData().perkCount = static_cast<std::int8_t>(std::clamp(points, 0, 127));
         a_report.Count("progression", "perksAdded", added);
+
+        // Base attributes changed above; fill health/magicka/stamina so the player does not start at the old maxima.
+        for (auto av : { RE::ActorValue::kHealth, RE::ActorValue::kMagicka, RE::ActorValue::kStamina }) {
+            avOwner->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, av, 100000.0f);
+        }
         a_report.Count("progression", "skills", static_cast<int>(a_in.skills.size()));
     }
 }

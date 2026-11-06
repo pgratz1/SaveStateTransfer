@@ -14,6 +14,7 @@ namespace sst::core {
 
         nlohmann::json ToJson() const;
         void           LogSummary(std::string_view a_title) const;
+        void           LogMissingByPlugin() const;  // "magic: 68 missing (MysticismMagic.esp 33, Adamant.esp 10, ...)"
         bool           Write(const std::filesystem::path& a_path) const;
 
     private:

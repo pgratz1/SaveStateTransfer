@@ -31,6 +31,8 @@ namespace sst::core {
         c.enableTriggerFiles = ini.GetBoolValue("General", "bEnableTriggerFiles", c.enableTriggerFiles);
         c.triggerPollMs = static_cast<std::uint32_t>(ini.GetLongValue("General", "iTriggerPollMs", c.triggerPollMs));
         c.framesBetweenStages = static_cast<std::uint32_t>(ini.GetLongValue("Import", "iFramesBetweenStages", c.framesBetweenStages));
+        c.restorePosition = ini.GetBoolValue("Import", "bRestorePosition", c.restorePosition);
+        c.refundMissingPerks = ini.GetBoolValue("Import", "bRefundMissingPerks", c.refundMissingPerks);
         c.logImportSteps = ini.GetBoolValue("Debug", "bLogImportSteps", c.logImportSteps);
         g_config = c;
         logger::info("config loaded from {} (export key 0x{:X}, import key 0x{:X}, dry-run key 0x{:X}, modifier 0x{:X})",

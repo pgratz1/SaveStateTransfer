@@ -14,6 +14,8 @@ namespace sst::core {
         std::uint32_t triggerPollMs = 1000;
         // [Import]
         std::uint32_t framesBetweenStages = 3;
+        bool          restorePosition = true;     // move the player back to where the import started
+        bool          refundMissingPerks = true;  // perks that do not resolve in the target become perk points
         // [Debug]
         bool          logImportSteps = true;
 

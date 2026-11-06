@@ -99,7 +99,39 @@ namespace sst::world {
         const auto frames = cfg.framesBetweenStages;
         int planned = 0, skipped = 0;
 
+        // Replay in natural editor-ID order so quest chains run in sequence (MG05 before MG08, MQ104 before MQ105):
+        // later stages often assume the earlier quest's fragments already ran.
+        auto naturalKey = [](const std::string& a_s) {
+            std::vector<std::pair<std::string, long long>> key;
+            std::string text;
+            for (std::size_t i = 0; i < a_s.size();) {
+                if (std::isdigit(static_cast<unsigned char>(a_s[i]))) {
+                    long long n = 0;
+                    while (i < a_s.size() && std::isdigit(static_cast<unsigned char>(a_s[i]))) {
+                        n = n * 10 + (a_s[i] - '0');
+                        ++i;
+                    }
+                    key.emplace_back(text, n);
+                    text.clear();
+                } else {
+                    text += static_cast<char>(std::tolower(static_cast<unsigned char>(a_s[i])));
+                    ++i;
+                }
+            }
+            key.emplace_back(text, -1);
+            return key;
+        };
+        std::vector<const schema::QuestState*> ordered;
+        ordered.reserve(a_in.quests.size());
         for (const auto& q : a_in.quests) {
+            ordered.push_back(&q);
+        }
+        std::stable_sort(ordered.begin(), ordered.end(), [&](const schema::QuestState* a, const schema::QuestState* b) {
+            return naturalKey(a->editorId.empty() ? a->form.ToString() : a->editorId) < naturalKey(b->editorId.empty() ? b->form.ToString() : b->editorId);
+        });
+
+        for (const auto* qp : ordered) {
+            const auto& q = *qp;
             const std::string label = q.editorId.empty() ? q.form.ToString() : q.editorId;
             auto* quest = q.form.Resolve<RE::TESQuest>();
             if (!quest) {
