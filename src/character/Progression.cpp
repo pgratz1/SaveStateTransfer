@@ -54,7 +54,8 @@ namespace sst::character {
             a_out.skills[kSkillNames[i]] = s;
         }
         for (const auto& [name, av] : kAttributes) {
-            a_out.attributes[name] = avOwner->GetBaseActorValue(av);
+            // base + permanent modifiers (level-ups, modav), without gear/spell effects
+            a_out.attributes[name] = avOwner->GetPermanentActorValue(av);
         }
         a_out.dragonSouls = avOwner->GetBaseActorValue(RE::ActorValue::kDragonSouls);
 
@@ -73,6 +74,31 @@ namespace sst::character {
             }
         }
         a_report.Count("progression", "perks", static_cast<int>(a_out.perks.size()));
+    }
+
+    void ApplyAttributes(RE::PlayerCharacter* a_player, const schema::Progression& a_in, core::Report& a_report)
+    {
+        auto* avOwner = a_player->AsActorValueOwner();
+        for (const auto& [name, av] : kAttributes) {
+            auto it = a_in.attributes.find(name);
+            if (it == a_in.attributes.end()) {
+                continue;
+            }
+            // SetBaseActorValue does not stick for the player's health/magicka/stamina (the race/level formula wins),
+            // so adjust the permanent modifier instead, exactly like `player.modav`.
+            const float before = avOwner->GetPermanentActorValue(av);
+            const float delta = it->second - before;
+            if (std::fabs(delta) > 0.01f) {
+                avOwner->ModActorValue(av, delta);
+            }
+            const float after = avOwner->GetPermanentActorValue(av);
+            logger::info("attributes: {} permanent {} -> {} (target {})", name, before, after, it->second);
+            if (std::fabs(after - it->second) > 0.5f) {
+                a_report.Error("progression", name, std::format("could not set attribute: {} after apply, wanted {}", after, it->second));
+            }
+            // fill the bar so the player does not sit at the old maximum
+            avOwner->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, av, 100000.0f);
+        }
     }
 
     void ImportProgression(RE::PlayerCharacter* a_player, const schema::Progression& a_in, core::Report& a_report)
@@ -103,11 +129,7 @@ namespace sst::character {
                 data->legendaryLevels[*idx] = s.legendary;
             }
         }
-        for (const auto& [name, av] : kAttributes) {
-            if (auto it = a_in.attributes.find(name); it != a_in.attributes.end()) {
-                avOwner->SetBaseActorValue(av, it->second);
-            }
-        }
+        ApplyAttributes(a_player, a_in, a_report);
         avOwner->SetBaseActorValue(RE::ActorValue::kDragonSouls, a_in.dragonSouls);
 
         int added = 0, missing = 0;
@@ -132,10 +154,7 @@ namespace sst::character {
         a_player->GetGameStatsData().perkCount = static_cast<std::int8_t>(std::clamp(points, 0, 127));
         a_report.Count("progression", "perksAdded", added);
 
-        // Base attributes changed above; fill health/magicka/stamina so the player does not start at the old maxima.
-        for (auto av : { RE::ActorValue::kHealth, RE::ActorValue::kMagicka, RE::ActorValue::kStamina }) {
-            avOwner->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, av, 100000.0f);
-        }
+
         a_report.Count("progression", "skills", static_cast<int>(a_in.skills.size()));
     }
 }

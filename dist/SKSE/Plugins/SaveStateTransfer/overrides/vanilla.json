@@ -3,7 +3,7 @@
   "description": "Quest replay overrides for vanilla Skyrim. Matched by editor ID glob. Modes: skip | finalOnly | onlyStages.",
   "rules": [
     { "match": "MQ101", "mode": "finalOnly", "reason": "Unbound: intro sequence must never be replayed" },
-    { "match": "MQ102", "mode": "skip",      "reason": "Before the Storm: start-game-enabled, driven by MQ101 completion" },
+    { "match": "MQ102", "mode": "finalOnly", "reason": "Before the Storm: start-game-enabled; run only its final stage so it leaves the journal" },
     { "match": "MQ201", "mode": "finalOnly", "reason": "Diplomatic Immunity: stage fragments teleport the player into the embassy and confiscate gear" },
     { "match": "MQ201Party", "mode": "skip", "reason": "embassy party scene quest" },
     { "match": "MQ201ThalmorEmbassy", "mode": "skip", "reason": "embassy helper quest" },

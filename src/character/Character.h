@@ -10,6 +10,9 @@ namespace sst::character {
 
     void ExportProgression(RE::PlayerCharacter* a_player, schema::Progression& a_out, core::Report& a_report);
     void ImportProgression(RE::PlayerCharacter* a_player, const schema::Progression& a_in, core::Report& a_report);
+    // Health/magicka/stamina via the permanent modifier (+ refill). Also run again at the end of the import, after
+    // the race switch and quest fragments have settled.
+    void ApplyAttributes(RE::PlayerCharacter* a_player, const schema::Progression& a_in, core::Report& a_report);
 
     void ExportMagic(RE::PlayerCharacter* a_player, schema::Magic& a_out, core::Report& a_report);
     void ImportMagic(RE::PlayerCharacter* a_player, const schema::Magic& a_in, core::Report& a_report);

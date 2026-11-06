@@ -214,19 +214,19 @@ namespace sst::world {
                         std::format("quest {} stopquest", label));
                 }
             }
-            // Objective display states last, once the stages have run.
-            if (!a_dryRun && q.running) {
+            // Objective states last, once the stages have run: for completed quests too, otherwise an objective a
+            // skipped fragment left displayed keeps the finished quest in the active journal (and "tracked").
+            if (!a_dryRun && (q.running || q.completed)) {
                 a_seq.Add([quest, objectives = q.objectives] {
                     const auto id = Hex(quest);
                     for (const auto& o : objectives) {
-                        switch (o.state) {
-                        case 1: core::ConsoleExec(std::format("setobjectivedisplayed {} {} 1", id, o.index)); break;
-                        case 2: core::ConsoleExec(std::format("setobjectivecompleted {} {} 1", id, o.index)); break;
-                        case 3: core::ConsoleExec(std::format("setobjectivecompleted {} {} 1", id, o.index)); core::ConsoleExec(std::format("setobjectivedisplayed {} {} 1", id, o.index)); break;
-                        case 4: core::ConsoleExec(std::format("setobjectivefailed {} {} 1", id, o.index)); break;
-                        case 5: core::ConsoleExec(std::format("setobjectivefailed {} {} 1", id, o.index)); core::ConsoleExec(std::format("setobjectivedisplayed {} {} 1", id, o.index)); break;
-                        default: break;
+                        const bool displayed = o.state == 1 || o.state == 3 || o.state == 5;
+                        if (o.state == 2 || o.state == 3) {
+                            core::ConsoleExec(std::format("setobjectivecompleted {} {} 1", id, o.index));
+                        } else if (o.state == 4 || o.state == 5) {
+                            core::ConsoleExec(std::format("setobjectivefailed {} {} 1", id, o.index));
                         }
+                        core::ConsoleExec(std::format("setobjectivedisplayed {} {} {}", id, o.index, displayed ? 1 : 0));
                     }
                 }, 0, std::format("quest {} objectives", label));
             }

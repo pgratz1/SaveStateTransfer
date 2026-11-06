@@ -143,6 +143,8 @@ namespace sst::app {
         if (auto* ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
             logger::info("import: game is paused; steps start when it is unpaused (headset on, no menu open)");
         }
+        seq.Add([player, exPtr, report] { character::ApplyAttributes(player, exPtr->character.progression, *report); }, 0,
+            "character attributes (re-apply)");
         seq.Add([report, reportPath, fileName, homeMarker, player] {
             if (auto marker = homeMarker.get()) {
                 if (player->GetParentCell() != marker->GetParentCell() || player->GetPosition().GetDistance(marker->GetPosition()) > 64.0f) {
