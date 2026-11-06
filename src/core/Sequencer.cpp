@@ -4,62 +4,86 @@
 #include "core/CrashProbe.h"
 
 namespace sst::core {
+    namespace {
+        constexpr auto kFrame = std::chrono::milliseconds(12);        // ~90 Hz VR frame
+        constexpr auto kPausedPoll = std::chrono::milliseconds(250);  // re-check interval while the game is paused
+    }
+
     void Sequencer::Add(Step a_step, std::uint32_t a_framesAfter, std::string a_label)
     {
-        _steps.push_back({ std::move(a_step), a_framesAfter, std::move(a_label) });
+        _state->steps.push_back({ std::move(a_step), a_framesAfter, std::move(a_label) });
     }
 
     void Sequencer::Start(std::string a_label)
     {
-        if (_running) {
+        if (_state->running.load()) {
             return;
         }
-        _label = std::move(a_label);
-        _running = true;
-        logger::info("{}: {} steps queued", _label, _steps.size());
-        SKSE::GetTaskInterface()->AddTask([this] { Pump(); });
+        _state->label = std::move(a_label);
+        _state->running = true;
+        logger::info("{}: {} steps queued", _state->label, _state->steps.size());
+        std::thread(&Sequencer::Pacer, _state).detach();
     }
 
-    void Sequencer::Pump()
+    void Sequencer::Pacer(std::shared_ptr<State> a_state)
     {
-        if (!_running) {
+        while (a_state->running.load()) {
+            a_state->stepDone = false;
+            SKSE::GetTaskInterface()->AddTask([a_state] { RunOne(a_state); });
+            while (!a_state->stepDone.load() && a_state->running.load()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            if (!a_state->running.load()) {
+                break;
+            }
+            if (a_state->wasPaused.load()) {
+                std::this_thread::sleep_for(kPausedPoll);
+            } else {
+                std::this_thread::sleep_for(kFrame * (1 + a_state->waitFrames.load()));
+            }
+        }
+    }
+
+    void Sequencer::RunOne(const std::shared_ptr<State>& a_state)
+    {
+        auto& s = *a_state;
+        if (!s.running.load()) {
+            s.stepDone = true;
             return;
         }
         auto* ui = RE::UI::GetSingleton();
         if (ui && ui->GameIsPaused()) {
-            if (!_pausedLogged) {
-                logger::info("{}: game is paused, waiting (unpause / put the headset on to continue)", _label);
-                _pausedLogged = true;
+            if (!s.pausedLogged) {
+                logger::info("{}: game is paused, waiting (unpause / put the headset on to continue)", s.label);
+                s.pausedLogged = true;
             }
-            SKSE::GetTaskInterface()->AddTask([this] { Pump(); });
+            s.wasPaused = true;
+            s.stepDone = true;
             return;
         }
-        _pausedLogged = false;
-        if (_wait > 0) {
-            --_wait;
-            SKSE::GetTaskInterface()->AddTask([this] { Pump(); });
-            return;
-        }
-        if (_steps.empty()) {
-            _running = false;
+        s.pausedLogged = false;
+        s.wasPaused = false;
+        if (s.steps.empty()) {
+            s.running = false;
             CrashProbe::ClearStep();
-            logger::info("{}: done", _label);
+            logger::info("{}: done", s.label);
+            s.stepDone = true;
             return;
         }
-        auto entry = std::move(_steps.front());
-        _steps.pop_front();
+        auto entry = std::move(s.steps.front());
+        s.steps.pop_front();
         if (!entry.label.empty()) {
-            CrashProbe::SetStep(_label + ": " + entry.label);
+            CrashProbe::SetStep(s.label + ": " + entry.label);
             if (Config::Get().logImportSteps) {
-                logger::info("{}: {}", _label, entry.label);
+                logger::info("{}: {}", s.label, entry.label);
             }
         }
         try {
             entry.fn();
         } catch (const std::exception& e) {
-            logger::error("{}: step '{}' threw: {}", _label, entry.label, e.what());
+            logger::error("{}: step '{}' threw: {}", s.label, entry.label, e.what());
         }
-        _wait = entry.framesAfter;
-        SKSE::GetTaskInterface()->AddTask([this] { Pump(); });
+        s.waitFrames = entry.framesAfter;
+        s.stepDone = true;
     }
 }

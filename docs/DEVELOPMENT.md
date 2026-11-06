@@ -51,3 +51,10 @@ layout differs; members are reached through `GetData()/GetPresence()/GetLock()` 
 whatever follows on the heap (both import freezes in `ExtraDataList::Add` came from this). Always create lists with
 `core::NewExtraDataList()` (`src/core/ExtraList.h`), which allocates the engine size; the `heapcheck` lines logged on
 save load replay the sequence and must end with `replay OK`.
+
+## Gotcha: never re-queue an SKSE task from inside a task
+
+SKSE drains its task queue until it is empty within one frame, so a task that re-adds itself (the old sequencer's
+"wait while paused" / "wait N frames" logic) spins the main thread at 100 % and the game freezes. The sequencer now
+has a background pacer thread that posts one step at a time and sleeps between posts (12 ms per "frame", 250 ms
+polls while the game is paused).
