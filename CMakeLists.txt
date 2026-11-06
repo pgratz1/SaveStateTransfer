@@ -115,6 +115,7 @@ add_library(${PROJECT_NAME} SHARED
     src/world/Locations.cpp
     src/core/ConsoleExec.cpp
     src/core/CrashProbe.cpp
+    src/core/HeapCheck.cpp
     src/core/BootTrace.cpp
     src/core/Paths.cpp
     src/core/Config.cpp

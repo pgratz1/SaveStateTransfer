@@ -3,6 +3,7 @@
 #include "app/Requests.h"
 #include "core/Config.h"
 #include "core/CrashProbe.h"
+#include "core/HeapCheck.h"
 #include "core/FormKey.h"
 #include "core/LoadOrder.h"
 #include "core/Paths.h"
@@ -96,6 +97,7 @@ namespace {
             break;
         case SKSE::MessagingInterface::kPostLoadGame:
             logger::info("save game loaded");
+            sst::core::HeapCheck::Run();
             break;
         default:
             break;

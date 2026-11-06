@@ -5,6 +5,7 @@ namespace sst::character {
 
     namespace {
         constexpr RE::FormID kGold001 = 0xF;
+        constexpr RE::FormID kUnarmed = 0x1F4;  // Skyrim.esm hidden "Unarmed" weapon; shows up as an equipped item with empty hands
 
         // Skyrim.esm RightHandEquip / LeftHandEquip. (BGSDefaultObjectManager::GetObject dereferences a bad pointer on VR.)
         const RE::BGSEquipSlot* HandSlot(bool a_left)
@@ -75,6 +76,9 @@ namespace sst::character {
                 a_out.gold = count;
                 continue;
             }
+            if (obj->GetFormID() == kUnarmed) {
+                continue;
+            }
             const auto key = FormKey::From(obj);
             if (!key.IsValid()) {
                 a_out.unresolvable.push_back({ std::format("0x{:08X}", obj->GetFormID()), obj->GetName() ? obj->GetName() : "", "dynamic form" });
@@ -105,34 +109,6 @@ namespace sst::character {
         a_report.Count("inventory", "unresolvable", static_cast<int>(a_out.unresolvable.size()));
     }
 
-    namespace {
-        // After AddObjectToContainer the engine owns (and may have merged or freed) the ExtraDataList we passed in,
-        // so for equipping we look the stack up again in the player's inventory instead of reusing the pointer.
-        RE::ExtraDataList* FindOwnedList(RE::PlayerCharacter* a_player, RE::TESBoundObject* a_obj, RE::ExtraDataList* a_wanted)
-        {
-            auto* changes = a_player->GetInventoryChanges();
-            if (!changes || !changes->entryList) {
-                return nullptr;
-            }
-            for (auto* entry : *changes->entryList) {
-                if (!entry || entry->object != a_obj || !entry->extraLists) {
-                    continue;
-                }
-                RE::ExtraDataList* first = nullptr;
-                for (auto* xl : *entry->extraLists) {
-                    if (xl == a_wanted) {
-                        return xl;
-                    }
-                    if (!first) {
-                        first = xl;
-                    }
-                }
-                return first;
-            }
-            return nullptr;
-        }
-    }
-
     void ImportInventory(RE::PlayerCharacter* a_player, const schema::Inventory& a_in, core::Report& a_report)
     {
         ImportInventoryRange(a_player, a_in, a_report, 0, a_in.items.size());
@@ -141,7 +117,6 @@ namespace sst::character {
     void ImportInventoryRange(RE::PlayerCharacter* a_player, const schema::Inventory& a_in, core::Report& a_report,
         std::size_t a_begin, std::size_t a_end)
     {
-        auto* equip = RE::ActorEquipManager::GetSingleton();
         a_end = std::min(a_end, a_in.items.size());
         if (a_begin == 0 && a_in.gold > 0) {
             if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold001)) {
@@ -154,6 +129,10 @@ namespace sst::character {
             auto* obj = item.form.Resolve<RE::TESBoundObject>();
             if (!obj) {
                 a_report.Missing("inventory", item.form.ToString(), item.name.empty() ? "item" : item.name);
+                continue;
+            }
+            if (obj->GetFormID() == kUnarmed) {
+                a_report.Skipped("inventory", item.form.ToString(), "engine Unarmed weapon");
                 continue;
             }
             RE::ExtraDataList* xList = nullptr;
@@ -193,15 +172,8 @@ namespace sst::character {
             }
             a_player->AddObjectToContainer(obj, xList, item.count, nullptr);
             ++added;
-            if (equip && !item.equippedSlot.empty()) {
-                const RE::BGSEquipSlot* slot = nullptr;
-                if (item.equippedSlot == "right") {
-                    slot = HandSlot(false);
-                } else if (item.equippedSlot == "left") {
-                    slot = HandSlot(true);
-                }
-                auto* owned = xList ? FindOwnedList(a_player, obj, xList) : nullptr;
-                equip->EquipObject(a_player, obj, owned, 1, slot, true, false, false, false);
+            if (!item.equippedSlot.empty()) {
+                a_report.Count("inventory", "previouslyEquipped");  // added to the inventory only; re-equip in game
             }
         }
         a_report.Count("inventory", "stacksAdded", added);
