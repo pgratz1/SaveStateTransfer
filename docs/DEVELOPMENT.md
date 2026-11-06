@@ -42,3 +42,12 @@
   console calls failed with "script factory unavailable" (VR: the SE-mapped "factories initialized" flag is false).
   Fixes: character phases moved into the sequencer (nothing runs while paused), console factory fallback, equip no
   longer reuses the ExtraDataList after AddObjectToContainer.
+
+## Gotcha: sizeof(RE::ExtraDataList) == 1
+
+In a multi-runtime NG build `RE::ExtraDataList` (and `BaseExtraList`) have no data members, because the AE 1.6.629+
+layout differs; members are reached through `GetData()/GetPresence()/GetLock()` with runtime offsets. So
+`RE::calloc<RE::ExtraDataList>(1)` allocates ONE byte. The engine then treats it as a 0x18-byte list and corrupts
+whatever follows on the heap (both import freezes in `ExtraDataList::Add` came from this). Always create lists with
+`core::NewExtraDataList()` (`src/core/ExtraList.h`), which allocates the engine size; the `heapcheck` lines logged on
+save load replay the sequence and must end with `replay OK`.

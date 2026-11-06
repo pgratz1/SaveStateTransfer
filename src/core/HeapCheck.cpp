@@ -1,5 +1,7 @@
 #include "core/HeapCheck.h"
 
+#include "core/ExtraList.h"
+
 namespace sst::core::HeapCheck {
     void Run()
     {
@@ -9,7 +11,7 @@ namespace sst::core::HeapCheck {
             return;
         }
         constexpr std::size_t kCount = 64;
-        constexpr std::size_t kSize = sizeof(RE::ExtraDataList);
+        constexpr std::size_t kSize = 0x18;  // engine ExtraDataList on SE/VR; sizeof(RE::ExtraDataList) is 1 in NG
         std::vector<std::byte*> blocks;
         for (std::size_t i = 0; i < kCount; ++i) {
             auto* p = static_cast<std::byte*>(RE::calloc(1, kSize));
@@ -56,7 +58,11 @@ namespace sst::core::HeapCheck {
         };
         logger::info("heapcheck: sizeof ExtraDataList={} ExtraTextDisplayData={} ExtraHealth={} ExtraCharge={} ExtraHotkey={}",
             sizeof(RE::ExtraDataList), sizeof(RE::ExtraTextDisplayData), sizeof(RE::ExtraHealth), sizeof(RE::ExtraCharge), sizeof(RE::ExtraHotkey));
-        auto* list = RE::calloc<RE::ExtraDataList>(1);
+        auto* list = NewExtraDataList();
+        if (!list) {
+            logger::info("heapcheck: extra lists unsupported on this runtime; replay skipped");
+            return;
+        }
         dump("after calloc", list);
         auto* health = new RE::ExtraHealth(1.5f);
         logger::info("heapcheck: ExtraHealth @{} next={} type={}", static_cast<const void*>(health), static_cast<const void*>(health->next),

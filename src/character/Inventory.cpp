@@ -1,5 +1,7 @@
 #include "character/Character.h"
 
+#include "core/ExtraList.h"
+
 namespace sst::character {
     using core::FormKey;
 
@@ -136,39 +138,43 @@ namespace sst::character {
                 continue;
             }
             RE::ExtraDataList* xList = nullptr;
-            auto extra = [&]() {
-                if (!xList) {
-                    // NG 3.7.0 declares but does not define ExtraDataList(); the engine constructor only zeroes
-                    // the members, so a zeroed game-heap allocation is equivalent.
-                    xList = RE::calloc<RE::ExtraDataList>(1);
+            bool               extraUnsupported = false;
+            auto extra = [&]() -> RE::ExtraDataList* {
+                if (!xList && !extraUnsupported) {
+                    xList = core::NewExtraDataList();  // engine-sized, zeroed; see core/ExtraList.h
+                    if (!xList) {
+                        extraUnsupported = true;
+                        a_report.Skipped("inventory", item.name.empty() ? item.form.ToString() : item.name,
+                            "item extra data (tempering/charge/name) not supported on this runtime; added plain");
+                    }
                 }
                 return xList;
             };
             if (item.health > 0.0f) {
-                extra()->Add(new RE::ExtraHealth(item.health));
+                if (auto* xl = extra()) xl->Add(new RE::ExtraHealth(item.health));
             }
             if (item.enchantment.IsValid()) {
                 if (auto* ench = item.enchantment.Resolve<RE::EnchantmentItem>()) {
-                    extra()->Add(new RE::ExtraEnchantment(ench, static_cast<std::uint16_t>(std::clamp(item.charge, 0.0f, 65535.0f))));
+                    if (auto* xl = extra()) xl->Add(new RE::ExtraEnchantment(ench, static_cast<std::uint16_t>(std::clamp(item.charge, 0.0f, 65535.0f))));
                 } else {
                     a_report.Missing("inventory", item.enchantment.ToString(), "enchantment on " + item.form.ToString());
                 }
             } else if (item.charge >= 0.0f) {
                 auto* c = new RE::ExtraCharge();
                 c->charge = item.charge;
-                extra()->Add(c);
+                if (auto* xl = extra()) xl->Add(c);
             }
             if (!item.customEnchant.empty()) {
                 a_report.Skipped("inventory", item.name.empty() ? item.form.ToString() : item.name, "player-made enchantment not recreated (M3)");
             }
             if (item.soul > 0) {
-                extra()->Add(new RE::ExtraSoul(static_cast<RE::SOUL_LEVEL>(item.soul)));
+                if (auto* xl = extra()) xl->Add(new RE::ExtraSoul(static_cast<RE::SOUL_LEVEL>(item.soul)));
             }
             if (!item.name.empty()) {
-                extra()->Add(new RE::ExtraTextDisplayData(item.name.c_str()));
+                if (auto* xl = extra()) xl->Add(new RE::ExtraTextDisplayData(item.name.c_str()));
             }
             if (item.favorite) {
-                extra()->Add(new RE::ExtraHotkey(static_cast<RE::ExtraHotkey::Hotkey>(item.hotkey >= 0 ? item.hotkey : -1)));
+                if (auto* xl = extra()) xl->Add(new RE::ExtraHotkey(static_cast<RE::ExtraHotkey::Hotkey>(item.hotkey >= 0 ? item.hotkey : -1)));
             }
             a_player->AddObjectToContainer(obj, xList, item.count, nullptr);
             ++added;
