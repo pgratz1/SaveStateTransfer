@@ -6,7 +6,8 @@ namespace sst::core::CrashProbe {
     namespace {
         std::mutex       g_mutex;
         std::string      g_step;
-        std::atomic<int> g_logged{ 0 };
+        std::atomic<int> g_loggedIdle{ 0 };  // exceptions with no import step active (other mods, often handled)
+        std::atomic<int> g_loggedStep{ 0 };
         bool             g_installed = false;
 
         bool IsFatal(DWORD a_code)
@@ -56,16 +57,16 @@ namespace sst::core::CrashProbe {
             if (!a_ep || !a_ep->ExceptionRecord || !IsFatal(a_ep->ExceptionRecord->ExceptionCode)) {
                 return EXCEPTION_CONTINUE_SEARCH;
             }
-            if (g_logged.fetch_add(1) >= 3) {
-                return EXCEPTION_CONTINUE_SEARCH;
-            }
-            const auto& rec = *a_ep->ExceptionRecord;
-            const auto  addr = reinterpret_cast<std::uintptr_t>(rec.ExceptionAddress);
             std::string step;
             {
                 std::lock_guard lock(g_mutex);
                 step = g_step;
             }
+            if ((step.empty() ? g_loggedIdle : g_loggedStep).fetch_add(1) >= 3) {
+                return EXCEPTION_CONTINUE_SEARCH;
+            }
+            const auto& rec = *a_ep->ExceptionRecord;
+            const auto  addr = reinterpret_cast<std::uintptr_t>(rec.ExceptionAddress);
             std::string detail;
             if (rec.ExceptionCode == EXCEPTION_ACCESS_VIOLATION && rec.NumberParameters >= 2) {
                 const char* kind = rec.ExceptionInformation[0] == 0 ? "read" : rec.ExceptionInformation[0] == 1 ? "write" : "execute";

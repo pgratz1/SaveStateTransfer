@@ -6,10 +6,10 @@ namespace sst::character {
     using core::FormKey;
 
     namespace {
+        // Skyrim.esm RightHandEquip / LeftHandEquip (BGSDefaultObjectManager::GetObject reads a bad pointer on VR).
         const RE::BGSEquipSlot* HandSlot(bool a_left)
         {
-            auto* dom = RE::BGSDefaultObjectManager::GetSingleton();
-            return dom ? dom->GetObject<RE::BGSEquipSlot>(a_left ? RE::DEFAULT_OBJECT::kLeftHandEquip : RE::DEFAULT_OBJECT::kRightHandEquip) : nullptr;
+            return RE::TESForm::LookupByID<RE::BGSEquipSlot>(a_left ? 0x13F43 : 0x13F42);
         }
     }
 
