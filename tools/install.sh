@@ -29,10 +29,11 @@ META
 
 LIST="$MO2/profiles/$PROFILE/modlist.txt"
 [ -f "$LIST" ] || { echo "profile not found: $LIST" >&2; exit 1; }
-if grep -qx "[+-]$MOD" "$LIST"; then
-    sed -i "s/^-$MOD\$/+$MOD/" "$LIST"
+# MO2 writes modlist.txt with CRLF line endings; match and insert accordingly.
+if grep -q "^[+-]$MOD\r\?\$" "$LIST"; then
+    sed -i "s/^-$MOD\(\r\?\)\$/+$MOD\1/" "$LIST"
 else
     # modlist.txt is highest priority first, line 1 is MO2's header comment.
-    sed -i "1a +$MOD" "$LIST"
+    sed -i "1a +$MOD\r" "$LIST"
 fi
 echo "installed $(ls "$DEST/SKSE/Plugins" | tr '\n' ' ')-> $DEST; enabled in profile '$PROFILE'"
